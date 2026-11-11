@@ -1403,6 +1403,8 @@ return function()
                 -- the leg/phase/note lines, all inside the window.
                 -- An 80-char note wraps to 2 lines: measure the wrapped box.
                 if win.runNote then win.runNote:SetText(string.rep("n", 80)) end
+                -- A refusal is cut to 80 bytes: it must wrap inside the window.
+                if win.feedback then win.feedback:SetText(string.rep("f", 80)) end
                 -- Wrapped hints: bindHint/planHint/stopHint and the pause
                 -- warning all render (stopHint via the new window field).
                 TB.OnSystemMessage("TBM:RUN|uldaman|running|7/41|baelog|pull|pull|pulling 4851|left 2")

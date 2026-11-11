@@ -852,6 +852,9 @@ local function createWindow()
     -- What the last click did: sent, then the server's answer.
     win.feedback = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     win.feedback:SetPoint("TOPLEFT", lower, "TOPLEFT", 12, ctlY - 94)
+    -- A width makes a long server answer wrap (2 lines fit above STATUS)
+    -- instead of running past the window edge.
+    win.feedback:SetWidth(RW - 24); win.feedback:SetJustifyH("LEFT")
     win.feedback:SetText("")
 
     -- Status: plan, state lamp, step x/y progress, leg, phase, note.
