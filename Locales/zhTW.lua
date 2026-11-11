@@ -1185,6 +1185,20 @@ TortoiseBots.RegisterLocale("zhTW", {
     ["Working on guild order - "] = "正在處理公會訂單 - ",
     ["Zone"] = "區域",
     ["sent, waiting for the server..."] = "已送出，等待伺服器回應…",
+    -- v2.x additions
+    ["Summoning %s to a safe position near you (3s); it will follow on arrival."] = "正在把 %s 召喚到你附近的安全位置（3 秒），抵達後會跟隨你。",
+    ["Uninvite sent for bot %s."] = "已將 %s 移出隊伍。",
+    ["Bot %s now following %s."] = "%s 正在跟隨 %s。",
+    ["Bot %s formation set to %s."] = "%s 的隊形已設為 %s。",
+    ["Bot %s will stay."] = "%s 會留在原地。",
+    ["Bot %s will guard this position."] = "%s 會守住這個位置。",
+    ["Bot %s is free to move."] = "%s 可以自由行動。",
+    ["Bot %s will attack your selected target."] = "%s 會攻擊你選取的目標。",
+    ["Bot %s will run a readiness check."] = "%s 會進行準備確認。",
+    ["Removal requested for bot %s; Headless cleanup completes asynchronously."] = "已要求移除 %s，清理會在背景完成。",
+    ["Forwarded command for %s: %s; action success is not guaranteed."] = "已轉送指令給 %s：%s（不保證成功執行）。",
+    -- v2.x additions
+    ["Bot %s queued for login; it will follow %s after entering the world."] = "%s 排隊登入中，進入世界後會跟隨 %s。",
 })
 
 -- Dungeon-run plan titles: official zhTW instance names (Map.dbc), wing after a dash.

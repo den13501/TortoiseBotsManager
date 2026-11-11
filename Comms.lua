@@ -28,6 +28,37 @@ if not C.STATUS then C.STATUS = {
     SUMMONING="summoning", INVITING="inviting", KICKING="kicking", REMOVING="removing",
 } end
 
+-- [zh] Status-bar text for a server lifecycle/action reply: the localized
+-- line when the wording is known, else the server text unchanged. English
+-- clients get the server text byte for byte (every L[] key is the English).
+local function statusText(msg)
+    local _, _, b, m = string.find(msg, "^Bot (%S+) queued for login; it will follow (%S+) after entering the world%.?$")
+    if b then return string.format(L["Bot %s queued for login; it will follow %s after entering the world."], b, m) end
+    local _, _, s = string.find(msg, "^Summoning (%S+) to a safe position near you %(3s%); it will follow on arrival%.?$")
+    if s then return string.format(L["Summoning %s to a safe position near you (3s); it will follow on arrival."], s) end
+    local _, _, u = string.find(msg, "^Uninvite sent for bot (%S+)%.$")
+    if u then return string.format(L["Uninvite sent for bot %s."], u) end
+    local _, _, n, rest = string.find(msg, "^Bot (%S+) (.-)%.$")
+    if n then
+        local _, _, who = string.find(rest, "^now following (%S+)$")
+        if who then return string.format(L["Bot %s now following %s."], n, who) end
+        local _, _, f = string.find(rest, "^formation set to (%S+)$")
+        if f then return string.format(L["Bot %s formation set to %s."], n, f) end
+        local fmt = nil
+        if rest == "will stay" then fmt = L["Bot %s will stay."]
+        elseif rest == "will guard this position" then fmt = L["Bot %s will guard this position."]
+        elseif rest == "is free to move" then fmt = L["Bot %s is free to move."]
+        elseif rest == "will attack your selected target" then fmt = L["Bot %s will attack your selected target."]
+        elseif rest == "will run a readiness check" then fmt = L["Bot %s will run a readiness check."] end
+        if fmt then return string.format(fmt, n) end
+    end
+    local _, _, r = string.find(msg, "^Removal requested for bot (%S+); Headless cleanup completes asynchronously%.$")
+    if r then return string.format(L["Removal requested for bot %s; Headless cleanup completes asynchronously."], r) end
+    local _, _, fc, cmd = string.find(msg, "^Forwarded command for (%S+): (.-); action success is not guaranteed%.$")
+    if fc then return string.format(L["Forwarded command for %s: %s; action success is not guaranteed."], fc, cmd) end
+    return msg
+end
+
 -- Matches BotCommands.cpp at the TortoiseBots headless-command baseline.
 -- If server changes wording, update here and add commit SHA to comment.
 local PAT = {
@@ -968,7 +999,7 @@ function TB.OnSystemMessage(msg)
     if string.find(msg, PAT.queued) then
         local _, _, botName = string.find(msg, "Bot (%S+) queued")
         if botName then TB.SetState(botName, { status = C.STATUS.STARTING, online = false }) end
-        if TB.SetStatus then TB.SetStatus(msg, "pending") end
+        if TB.SetStatus then TB.SetStatus(statusText(msg), "pending") end
         TB.RequestPollSoon(C.POLL_AFTER_ADD); handled = true
 
     elseif string.find(msg, PAT.summoning) then
@@ -984,7 +1015,7 @@ function TB.OnSystemMessage(msg)
                 st.summonPendingUntil = ((GetTime and GetTime()) or 0) + (C.SUMMON_SETTLE or 15)
             end
         end
-        if TB.SetStatus then TB.SetStatus(msg, "pending") end; handled = true
+        if TB.SetStatus then TB.SetStatus(statusText(msg), "pending") end; handled = true
 
     elseif string.find(msg, PAT.inviteSent) then
         local name = acknowledgeInviteDispatch(msg)
@@ -999,36 +1030,36 @@ function TB.OnSystemMessage(msg)
 
     elseif string.find(msg, PAT.uninviteSent) then
         acknowledgeAction(msg, "uninvite")
-        if TB.SetStatus then TB.SetStatus(msg, "pending") end
+        if TB.SetStatus then TB.SetStatus(statusText(msg), "pending") end
         TB.RequestPollSoon(C.POLL_AFTER_CMD); handled = true
 
     elseif string.find(msg, PAT.willStay) then
         acknowledgeAction(msg, "stay", "stay")
-        if TB.SetStatus then TB.SetStatus(msg, "pending") end; handled = true
+        if TB.SetStatus then TB.SetStatus(statusText(msg), "pending") end; handled = true
 
     elseif string.find(msg, PAT.nowFollowing) then
         acknowledgeAction(msg, "follow", "follow")
-        if TB.SetStatus then TB.SetStatus(msg, "pending") end; handled = true
+        if TB.SetStatus then TB.SetStatus(statusText(msg), "pending") end; handled = true
 
     elseif string.find(msg, PAT.nowGuarding) then
         acknowledgeAction(msg, "guard", "guard")
-        if TB.SetStatus then TB.SetStatus(msg, "pending") end; handled = true
+        if TB.SetStatus then TB.SetStatus(statusText(msg), "pending") end; handled = true
 
     elseif string.find(msg, PAT.nowFree) then
         acknowledgeAction(msg, "free", "free")
-        if TB.SetStatus then TB.SetStatus(msg, "pending") end; handled = true
+        if TB.SetStatus then TB.SetStatus(statusText(msg), "pending") end; handled = true
 
     elseif string.find(msg, PAT.nowAttacking) then
         acknowledgeAction(msg, "attack")
-        if TB.SetStatus then TB.SetStatus(msg, "pending") end; handled = true
+        if TB.SetStatus then TB.SetStatus(statusText(msg), "pending") end; handled = true
 
     elseif string.find(msg, PAT.nowReady) then
         acknowledgeAction(msg, "ready")
-        if TB.SetStatus then TB.SetStatus(msg, "pending") end; handled = true
+        if TB.SetStatus then TB.SetStatus(statusText(msg), "pending") end; handled = true
 
     elseif string.find(msg, PAT.formationSet) then
         acknowledgeAction(msg, "formation")
-        if TB.SetStatus then TB.SetStatus(msg, "pending") end; handled = true
+        if TB.SetStatus then TB.SetStatus(statusText(msg), "pending") end; handled = true
 
     elseif string.find(msg, PAT.pullback) then
         if TB.SetStatus then TB.SetStatus(msg, "pending") end; handled = true
@@ -1042,11 +1073,11 @@ function TB.OnSystemMessage(msg)
             end
         end
         if TB.RecordAIResponse then TB.RecordAIResponse(name, msg, "pending")
-        elseif TB.SetStatus then TB.SetStatus(msg, "ok") end
+        elseif TB.SetStatus then TB.SetStatus(statusText(msg), "ok") end
         handled = true
 
     elseif string.find(msg, PAT.removed) then
-        if TB.SetStatus then TB.SetStatus(msg, "pending") end
+        if TB.SetStatus then TB.SetStatus(statusText(msg), "pending") end
         TB.RequestPollSoon(C.POLL_AFTER_CMD); handled = true
 
     elseif string.find(msg, PAT.addFailed) or string.find(msg, PAT.addNotFound) then

@@ -805,6 +805,7 @@ local function createWindow()
     ctl:SetPoint("TOPLEFT", lower, "TOPLEFT", 12, ctlY)
     ctl:SetText(L["CONTROLS"])
     TB.SetTextColor(ctl, color("title"))
+    win.controlsTitle = ctl
     win.start = smallButton(lower, L["Start"], 88, 12, ctlY - 18,
         L["Start"], L["Start the picked plan (or the plan of the lead bot's map)."],
         function() TB.SendRunStart(selectedPlan) end)
@@ -852,17 +853,18 @@ local function createWindow()
     -- What the last click did: sent, then the server's answer.
     win.feedback = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     win.feedback:SetPoint("TOPLEFT", lower, "TOPLEFT", 12, ctlY - 94)
-    -- A width makes a long server answer wrap (2 lines fit above STATUS)
+    -- A width makes a long server answer wrap (3 lines fit above STATUS)
     -- instead of running past the window edge.
     win.feedback:SetWidth(RW - 24); win.feedback:SetJustifyH("LEFT")
     win.feedback:SetText("")
 
     -- Status: plan, state lamp, step x/y progress, leg, phase, note.
-    local stY = ctlY - 126
+    local stY = ctlY - 138
     local st = win:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     st:SetPoint("TOPLEFT", lower, "TOPLEFT", 12, stY)
     st:SetText(L["STATUS"])
     TB.SetTextColor(st, color("title"))
+    win.statusTitle = st
     win.runLamp = win:CreateTexture(nil, "OVERLAY")
     win.runLamp:SetWidth(8); win.runLamp:SetHeight(8)
     win.runLamp:SetPoint("TOPLEFT", lower, "TOPLEFT", 12, stY - 22)
@@ -1012,7 +1014,7 @@ local function visiblePlans()
     return out, here, zone
 end
 -- Height of everything hung off win.lower (controls, answer, status).
-local LOWER_H = 274
+local LOWER_H = 286
 
 local function placeRows(top, count)
     for i, row in ipairs(win.planRows) do
@@ -1127,12 +1129,6 @@ local function renderPlans()
         win.planSearch:Hide()
         win.planPageText:Hide(); win.planPrev:Hide(); win.planNext:Hide(); win.plans:Hide()
         win.planEmpty:Hide()
-        listTop = -246
-        -- A dungeon with wings lists just its plans to pick from.
-        local wings = nHere > 1 and nHere or 0
-        if wings > PROW then wings = PROW end
-        placeRows(listTop, wings)
-        for i = 1, wings do fillRow(win.planRows[i], here[i]) end
         if table.getn(plans) == 0 then
             win.planHint:SetText(plansPending and L["Loading the plans..."] or L["No plans loaded: Change, then Reload."])
         elseif nHere == 1 and herePlan then
@@ -1146,7 +1142,18 @@ local function renderPlans()
         else
             win.planHint:SetText(L["No dungeon here: Start uses the lead bot's dungeon."])
         end
-        bottom = wings > 0 and (listTop - wings * 22 - 4) or -242
+        -- The hint sits at -230; each wrapped line beyond the first
+        -- pushes the wing rows and the controls down (CJK wraps sooner).
+        local extra = 0
+        local hintW = win.planHint.GetStringWidth and win.planHint:GetStringWidth() or 0
+        if hintW > RW - 24 then extra = (math.ceil(hintW / (RW - 24)) - 1) * 12 end
+        listTop = -246 - extra
+        -- A dungeon with wings lists just its plans to pick from.
+        local wings = nHere > 1 and nHere or 0
+        if wings > PROW then wings = PROW end
+        placeRows(listTop, wings)
+        for i = 1, wings do fillRow(win.planRows[i], here[i]) end
+        bottom = wings > 0 and (listTop - wings * 22 - 4) or (-242 - extra)
     end
     win.lower:ClearAllPoints()
     win.lower:SetPoint("TOPLEFT", win, "TOPLEFT", 0, bottom - 10)

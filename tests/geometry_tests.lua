@@ -1438,6 +1438,46 @@ return function()
                             fmt(rs), fmt(rp)))
                     end
                 end
+                -- Wrapped texts push what follows: a 3-line server answer
+                -- stays above STATUS, a 2-line plan hint above CONTROLS
+                -- (CJK glyphs are wider, so a translation wraps sooner).
+                local function clears(upper, lowerFs, label)
+                    if not (upper and lowerFs) then return end
+                    local u = boxRect(upper, cache)
+                    local l = frameRect(lowerFs, cache)
+                    if u.bottom > l.top then
+                        bad(string.format("RunWindow: %s %s runs into %s", label, fmt(u), fmt(l)))
+                    end
+                end
+                if win.feedback and win.statusTitle then
+                    win.feedback:SetText(string.rep("f", 3 * 46))
+                    clears(win.feedback, win.statusTitle, "3-line feedback")
+                    win.feedback:SetText("")
+                end
+                -- Picker closed: a wrapped plan hint moves the controls
+                -- (win.lower) down by one line per extra hint line.
+                if win.planHint and win.lower and TB.SetRunPlanPicker then
+                    local wasShown = win:IsVisible()
+                    win:Show()
+                    TB.SetRunPlanPicker(false)
+                    local function lowerTop()
+                        local _, _, _, _, y = win.lower:GetPoint(1)
+                        return y or 0
+                    end
+                    local realGet = win.planHint.GetStringWidth
+                    local y1 = lowerTop()
+                    win.planHint.GetStringWidth = function() return 2 * (300 - 24) - 10 end
+                    TB.RefreshRunWindow()
+                    local y2 = lowerTop()
+                    win.planHint.GetStringWidth = realGet
+                    TB.RefreshRunWindow()
+                    if not wasShown then win:Hide() end
+                    if not (y2 <= y1 - 12) then
+                        bad(string.format("RunWindow: a 2-line plan hint must push the controls down 12px (lower y %s -> %s)",
+                            tostring(y1), tostring(y2)))
+                    end
+                    for k in pairs(cache) do cache[k] = nil end
+                end
                 local boxes = {}
                 for _, key in ipairs({ "layout", "runLeg", "runPhase", "runNote", "runStop" }) do
                     if win[key] and win[key].kind == "FontString" then

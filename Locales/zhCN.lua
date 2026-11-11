@@ -1185,6 +1185,20 @@ TortoiseBots.RegisterLocale("zhCN", {
     ["Working on guild order - "] = "正在处理公会订单 - ",
     ["Zone"] = "区域",
     ["sent, waiting for the server..."] = "已送出，等待服务器回应…",
+    -- v2.x additions
+    ["Summoning %s to a safe position near you (3s); it will follow on arrival."] = "正在把 %s 召唤到你附近的安全位置（3 秒），抵达后会跟随你。",
+    ["Uninvite sent for bot %s."] = "已将 %s 移出队伍。",
+    ["Bot %s now following %s."] = "%s 正在跟随 %s。",
+    ["Bot %s formation set to %s."] = "%s 的队形已设为 %s。",
+    ["Bot %s will stay."] = "%s 会留在原地。",
+    ["Bot %s will guard this position."] = "%s 会守住这个位置。",
+    ["Bot %s is free to move."] = "%s 可以自由行动。",
+    ["Bot %s will attack your selected target."] = "%s 会攻击你选取的目标。",
+    ["Bot %s will run a readiness check."] = "%s 会进行准备确认。",
+    ["Removal requested for bot %s; Headless cleanup completes asynchronously."] = "已要求移除 %s，清理会在背景完成。",
+    ["Forwarded command for %s: %s; action success is not guaranteed."] = "已转送指令给 %s：%s（不保证成功运行）。",
+    -- v2.x additions
+    ["Bot %s queued for login; it will follow %s after entering the world."] = "%s 排队登录中，进入世界后会跟随 %s。",
 })
 
 -- Dungeon-run plan titles: official zhCN instance names (Map.dbc), wing after a dash.
