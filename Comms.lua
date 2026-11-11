@@ -20,6 +20,7 @@
 --     → TB.OnSystemMessage (reconcile, status, refresh)
 
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C or {}
 if not C.STATUS then C.STATUS = {
     OFFLINE="offline", OFFLINE_PENDING="offline-pending", UNKNOWN="unknown", FAILED="failed",
@@ -144,10 +145,10 @@ end
 local function actionLabel(intent)
     local def = TB.GetActionDefinition and TB.GetActionDefinition(intent)
     if def and def.label then return def.label end
-    if intent == "strategy +grind" or intent == "strategy -grind" then return "Grind" end
+    if intent == "strategy +grind" or intent == "strategy -grind" then return L["Grind"] end
     if intent == "totem drop" then
         if C.ACTION_LABELS and C.ACTION_LABELS["totem party drop"] then return C.ACTION_LABELS["totem party drop"] end
-        return "Drop totems"
+        return L["Drop totems"]
     end
     if C.ACTION_LABELS and C.ACTION_LABELS[intent] then return C.ACTION_LABELS[intent] end
     local _, _, behaviorKey = string.find(intent or "", "^behavior%s+(%S+)$")
@@ -159,8 +160,8 @@ local function actionLabel(intent)
     end
     local _, _, mark, bot = string.find(intent or "", "^cc%s+(%a+)%s*(%S*)$")
     if mark == "clear" then
-        if bot and bot ~= "" then return "CC clear (" .. bot .. ")" end
-        return "CC clear"
+        if bot and bot ~= "" then return L["CC clear"] .. " (" .. bot .. ")" end
+        return L["CC clear"]
     end
     if mark and C.CC_MARK_LABELS and C.CC_MARK_LABELS[mark] then
         if bot and bot ~= "" then return "CC " .. C.CC_MARK_LABELS[mark] .. " (" .. bot .. ")" end
@@ -201,7 +202,7 @@ function TB.ParseActionMessage(msg)
         local packet = setActionAck(splitProtocol(string.sub(msg, string.len(ackPrefix) + 1)))
         if not packet then
             TB.lastActionError = { intent = "unknown", code = "malformed", message = "Malformed action response." }
-            if TB.SetStatus then TB.SetStatus("Malformed action response.", "warn") end
+            if TB.SetStatus then TB.SetStatus(L["Malformed action response."], "warn") end
             return true, "error", TB.lastActionError
         end
         TB.lastActionAck = packet
@@ -258,7 +259,8 @@ function TB.ParseActionMessage(msg)
         -- generic text below still reports every run ACK/ERR.
         if TB.OnRunAck then TB.OnRunAck(packet) end
         local scope = packet.scope == "party" and "party" or packet.scope
-        local text = actionLabel(packet.intent) .. " accepted · " .. scope .. " · " .. packet.count
+        local text = string.format(L["%s accepted · %s · %s"], actionLabel(packet.intent),
+            scope == "party" and L["party"] or scope, tostring(packet.count))
         if packet.executor ~= "-" then text = text .. " (" .. packet.executor .. ")" end
         if TB.SetStatus then TB.SetStatus(text, "ok") end
         if TB.Refresh then TB.Refresh() end
@@ -288,8 +290,8 @@ function TB.ParseActionMessage(msg)
             if TB.Refresh then TB.Refresh() end
             return true, "error", packet
         end
-        local text = actionLabel(packet.intent) .. ": " .. packet.code
-        if packet.message ~= "" then text = text .. " — " .. packet.message end
+        local text = actionLabel(packet.intent) .. ": " .. TB.ServerText(packet.code)
+        if packet.message ~= "" then text = text .. " — " .. TB.ServerText(packet.message) end
         if TB.SetStatus then TB.SetStatus(text, "warn") end
         if TB.Refresh then TB.Refresh() end
         return true, "error", packet
@@ -662,7 +664,7 @@ function TB.OnCommandSent(cmd)
         end
     end
     if verb == "summon" and name then
-        if TB.SetStatus then TB.SetStatus("Summoning " .. name .. "…", "pending") end
+        if TB.SetStatus then TB.SetStatus(string.format(L["Summoning %s…"], name), "pending") end
     end
     if TB.Refresh then TB.Refresh() end
     if verb ~= "action" and verb ~= "strategy" and verb ~= "lootlog" and verb ~= "order" and verb ~= "alts" then TB.RequestPollSoon((C and C.POLL_AFTER_CMD) or 1.4) end
@@ -692,9 +694,9 @@ function TB.OnWhisperMessage(msg, sender)
         local mail = entry and entry.mail and table.getn(entry.mail) or 0
         if TB.SetStatus then
             if string.find(msg or "", "=== Bank ===") or string.find(msg or "", "=== Mailbox ===") then
-                TB.SetStatus("Reading " .. name .. "'s vault…", "pending")
+                TB.SetStatus(string.format(L["Reading %s's vault…"], name), "pending")
             else
-                TB.SetStatus(name .. "'s vault · bank " .. bank .. " · mail " .. mail, "ok")
+                TB.SetStatus(string.format(L["%s's vault · bank %s · mail %s"], name, tostring(bank), tostring(mail)), "ok")
             end
         end
         return
@@ -708,9 +710,9 @@ function TB.OnWhisperMessage(msg, sender)
         local count = entry and entry.flights and table.getn(entry.flights) or 0
         if TB.SetStatus then
             if string.find(msg or "", "=== Taxi ===") then
-                TB.SetStatus("Reading " .. name .. "'s flights…", "pending")
+                TB.SetStatus(string.format(L["Reading %s's flights…"], name), "pending")
             else
-                TB.SetStatus(name .. "'s flights · " .. count, "ok")
+                TB.SetStatus(string.format(L["%s's flights · %s"], name, tostring(count)), "ok")
             end
         end
         return
@@ -726,9 +728,9 @@ function TB.OnWhisperMessage(msg, sender)
         local count = entry and entry.spells and table.getn(entry.spells) or 0
         if TB.SetStatus then
             if string.find(msg or "", "=== Spells ===") then
-                TB.SetStatus("Reading " .. name .. "'s spellbook…", "pending")
+                TB.SetStatus(string.format(L["Reading %s's spellbook…"], name), "pending")
             else
-                TB.SetStatus(name .. "'s spellbook · " .. count, "ok")
+                TB.SetStatus(string.format(L["%s's spellbook · %s"], name, tostring(count)), "ok")
             end
         end
         return
@@ -848,16 +850,16 @@ function TB.OnSystemMessage(msg)
     end
     if rosterHandled then
         if rosterKind == "begin" then
-            if TB.SetStatus then TB.SetStatus("Syncing roster…", "pending") end
+            if TB.SetStatus then TB.SetStatus(L["Syncing roster…"], "pending") end
         elseif rosterKind == "end" then
-            if TB.SetStatus then TB.SetStatus("Roster updated · " .. tostring(rosterData), "ok") end
+            if TB.SetStatus then TB.SetStatus(L["Roster updated"] .. " · " .. tostring(rosterData), "ok") end
         elseif rosterKind == "claimed_begin" then
-            if TB.SetStatus then TB.SetStatus("Syncing guild bots…", "pending") end
+            if TB.SetStatus then TB.SetStatus(L["Syncing guild bots…"], "pending") end
         elseif rosterKind == "claimed_end" then
-            if TB.SetStatus then TB.SetStatus("Guild bots updated · " .. tostring(rosterData), "ok") end
+            if TB.SetStatus then TB.SetStatus(L["Guild bots updated"] .. " · " .. tostring(rosterData), "ok") end
         elseif rosterKind == "error" then
             local message = rosterData and rosterData.message or "Roster request failed."
-            if TB.SetStatus then TB.SetStatus("Roster: " .. message, "warn") end
+            if TB.SetStatus then TB.SetStatus(L["Roster:"] .. " " .. message, "warn") end
         end
         TB.lastSystem = msg
         return
@@ -895,7 +897,7 @@ function TB.OnSystemMessage(msg)
         local _, _, change = string.find(msg, "^Strategy change '([^']+)' applied")
         if change then
             if TB.NoteStrategyChange then TB.NoteStrategyChange(change) end
-            if TB.SetStatus then TB.SetStatus(change .. " applied", "ok") end
+            if TB.SetStatus then TB.SetStatus(string.format(L["%s applied"], change), "ok") end
             if TB.Refresh then TB.Refresh() end
             TB.lastSystem = msg
             return
@@ -952,7 +954,7 @@ function TB.OnSystemMessage(msg)
 
     if string.find(msg, PAT.noBotsOnline) then
         TB.MarkPollGotAny()
-        if TB.SetStatus then TB.SetStatus("No owned bots online.", "muted") end
+        if TB.SetStatus then TB.SetStatus(L["No owned bots online."], "muted") end
         if TB.Refresh  then TB.Refresh() end
         return
     end
@@ -987,7 +989,7 @@ function TB.OnSystemMessage(msg)
     elseif string.find(msg, PAT.inviteSent) then
         local name = acknowledgeInviteDispatch(msg)
         if TB.SetStatus then
-            local text = name and (name .. ": invite sent; waiting for group join…") or msg
+            local text = name and string.format(L["%s: invite sent; waiting for group join…"], name) or msg
             TB.SetStatus(text, "pending")
         end
         TB.RequestPollSoon(C.POLL_AFTER_CMD); handled = true

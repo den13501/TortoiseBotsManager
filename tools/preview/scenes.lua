@@ -21,7 +21,7 @@ dofile(root .. "/tools/preview/mock.lua")
 local toc = io.open(root .. "/TortoiseBotsManager.toc"):read("*a")
 for line in string.gfind(toc, "[^\r\n]+") do
     if not string.find(line, "^##") and string.find(line, "%.lua%s*$") then
-        local file = string.gsub(line, "%s+$", "")
+        local file = string.gsub(string.gsub(line, "%s+$", ""), "\\", "/")
         dofile(root .. "/" .. file)
     end
 end

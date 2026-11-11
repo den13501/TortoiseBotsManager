@@ -35,12 +35,13 @@
 -- sourceType is corpse, chest, gathering, object or other; source its name.
 
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C or {}
 local COL = C.COLOR or {}
 
 local CAP = "loot-log"
 local MAX_ROWS = 2000
-local QUALITY_NAMES = { "Poor", "Common", "Uncommon", "Rare", "Epic", "Legendary", "Artifact" }
+local QUALITY_NAMES = { L["Poor"], L["Common"], L["Uncommon"], L["Rare"], L["Epic"], L["Legendary"], L["Artifact"] }
 local ROW_TYPES = { "all", "items", "rolls" }
 local KNOWN_EVENTS = { StoreLootAction = true, LootMoney = true, LootRoll = true }
 
@@ -190,18 +191,36 @@ local function rowIsRoll(row)
     return row.event == "LootRoll"
 end
 
+-- The server logs item names in English; the client item cache holds them in
+-- the client language, so a cached item shows (and is searched) by that name.
+local function itemName(row)
+    if row.event ~= "LootMoney" and GetItemInfo and tonumber(row.itemId) then
+        local name = GetItemInfo(math.floor(tonumber(row.itemId)))
+        if name and name ~= "" then return name end
+    end
+    return row.item
+end
+
+local SOURCE_TYPE_LABEL = { corpse = L["corpse"], chest = L["chest"], gathering = L["gathering"],
+    object = L["object"], other = L["other"] }
+
 local function rowMatches(row, f)
     if f.rowType == "items" and rowIsRoll(row) then return false end
     if f.rowType == "rolls" and not rowIsRoll(row) then return false end
     if f.bot ~= "" and not string.find(string.lower(row.bot or ""), string.lower(f.bot), 1, true) then
         return false
     end
-    if f.item ~= "" and not string.find(string.lower(row.item or ""), string.lower(f.item), 1, true) then
-        return false
+    if f.item ~= "" then
+        local needle = string.lower(f.item)
+        if not string.find(string.lower(row.item or ""), needle, 1, true)
+            and not string.find(string.lower(itemName(row) or ""), needle, 1, true) then
+            return false
+        end
     end
     if f.quality >= 0 and row.quality ~= f.quality then return false end
     if f.source ~= "" then
-        local hay = string.lower((row.sourceType or "") .. " " .. (row.source or ""))
+        local hay = string.lower((row.sourceType or "") .. " " .. (SOURCE_TYPE_LABEL[row.sourceType or ""] or "")
+            .. " " .. (row.source or ""))
         if not string.find(hay, string.lower(f.source), 1, true) then return false end
     end
     return true
@@ -318,7 +337,7 @@ function TB.ParseLootMessage(msg)
             if endCursor == "expired" then
                 setCursor(nil)
                 if TB.SetStatus then
-                    TB.SetStatus("Loot history: the saved page is gone, starting over.", "warn")
+                    TB.SetStatus(L["Loot history: the saved page is gone, starting over."], "warn")
                 end
                 if TB.RequestLootPage then TB.RequestLootPage(nil) end
             else
@@ -330,7 +349,7 @@ function TB.ParseLootMessage(msg)
                     setCursor(nil)
                 end
                 if TB.SetStatus then
-                    TB.SetStatus("Loot history · " .. added .. " new rows", "ok")
+                    TB.SetStatus(string.format(L["Loot history · %s new rows"], tostring(added)), "ok")
                 end
             end
             if TB.RefreshLootView then TB.RefreshLootView() end
@@ -379,7 +398,7 @@ function TB.OnLootError(packet)
     if not packet or packet.intent ~= "lootlog" then return false end
     if packet.code == "expired" then
         setCursor(nil)
-        if TB.SetStatus then TB.SetStatus("Loot history: the saved page is gone, starting over.", "warn") end
+        if TB.SetStatus then TB.SetStatus(L["Loot history: the saved page is gone, starting over."], "warn") end
         TB.RequestLootPage(nil)
         return true
     end
@@ -405,7 +424,8 @@ local function qualityName(quality)
 end
 
 local function timeTail(ts)
-    local _, _, tail = string.find(ts or "", "(%d%d:%d%d:%d%d)%s*$")
+    -- The live push and the log both end in an offset ("... 19:26:06+00").
+    local _, _, tail = string.find(ts or "", "(%d%d:%d%d:%d%d)[%+%-]?%d*%s*$")
     if tail then return tail end
     return trim(ts)
 end
@@ -423,7 +443,7 @@ local function formatCopper(copper)
 end
 TB.FormatLootMoney = formatCopper
 
-local VOTE_LABEL = { need = "Need", greed = "Greed", disenchant = "Disenchant", pass = "Pass" }
+local VOTE_LABEL = { need = L["Need"], greed = L["Greed"], disenchant = L["Disenchant"], pass = L["Pass"] }
 local VOTE_COLOR = { need = "|cff00ff00", greed = "|cffffd200", disenchant = "|cffa335ee", pass = "|cff9d9d9d" }
 
 -- One row of text: time, bot, item in its quality colour (or the money), the
@@ -435,7 +455,7 @@ local function rowText(row)
     if row.event == "LootMoney" then
         table.insert(parts, formatCopper(row.copper))
     else
-        table.insert(parts, qualityHex(row.quality) .. "[" .. (row.item or ("item #" .. tostring(row.itemId or "?"))) .. "]|r")
+        table.insert(parts, qualityHex(row.quality) .. "[" .. (itemName(row) or ("item #" .. tostring(row.itemId or "?"))) .. "]|r")
         if rowIsRoll(row) then
             local vote = VOTE_LABEL[row.vote] or row.vote or "?"
             local voteText = (VOTE_COLOR[row.vote] or "") .. vote .. "|r"
@@ -444,10 +464,12 @@ local function rowText(row)
         end
     end
     local source = row.source or ""
+    local sourceType = row.sourceType or "other"
+    local sourceLabel = SOURCE_TYPE_LABEL[sourceType] or sourceType
     if source ~= "" then
-        table.insert(parts, (row.sourceType or "other") .. ": " .. source)
-    elseif row.sourceType and row.sourceType ~= "other" then
-        table.insert(parts, row.sourceType)
+        table.insert(parts, sourceLabel .. ": " .. source)
+    elseif sourceType ~= "other" then
+        table.insert(parts, sourceLabel)
     end
     return table.concat(parts, " · ")
 end
@@ -463,15 +485,15 @@ function TB.CreateLootTab(parent)
     tab:SetWidth(tw); tab:SetHeight(325)
 
     if TB.UI and TB.UI.CreateHeading then
-        TB.UI.CreateHeading(tab, "Loot history", "What your party bots looted or rolled")
+        TB.UI.CreateHeading(tab, L["Loot history"], L["What your party bots looted or rolled"])
     end
 
     local clearBtn = TB.StyleButton(CreateFrame("Button", nil, tab, "UIPanelButtonTemplate"), "mode")
     clearBtn:SetWidth(56); clearBtn:SetHeight(18)
     clearBtn:SetPoint("TOPRIGHT", tab, "TOPRIGHT", 0, 2)
-    clearBtn:SetText("Clear")
+    clearBtn:SetText(L["Clear"])
     if TB.UI and TB.UI.SetTooltip then
-        TB.UI.SetTooltip(clearBtn, "Wipe this character's stored loot history")
+        TB.UI.SetTooltip(clearBtn, L["Wipe this character's stored loot history"])
     end
     clearBtn:SetScript("OnClick", function()
         if TB.ClearLootHistory then TB.ClearLootHistory() end
@@ -495,9 +517,9 @@ function TB.CreateLootTab(parent)
         if TB.StyleEditBox then TB.StyleEditBox(box, hint) end
         return box
     end
-    tab.botSearch = searchBox("TortoiseBotsManagerLootBotSearch", 0, 82, "bot", "Show only this bot", "Bot")
-    tab.itemSearch = searchBox("TortoiseBotsManagerLootItemSearch", 86, 112, "item", "Show only items with this name", "Item")
-    tab.sourceSearch = searchBox("TortoiseBotsManagerLootSourceSearch", 202, 84, "source", "Show only this source", "Source")
+    tab.botSearch = searchBox("TortoiseBotsManagerLootBotSearch", 0, 82, "bot", L["Show only this bot"], L["Bot"])
+    tab.itemSearch = searchBox("TortoiseBotsManagerLootItemSearch", 86, 112, "item", L["Show only items with this name"], L["Item"])
+    tab.sourceSearch = searchBox("TortoiseBotsManagerLootSourceSearch", 202, 84, "source", L["Show only this source"], L["Source"])
 
     local function stepper(x, width, label, set, tip)
         local row = CreateFrame("Frame", nil, tab)
@@ -529,20 +551,20 @@ function TB.CreateLootTab(parent)
     end
     tab.qualityStep = stepper(290, 100, function()
         local q = TB.GetLootFilters and TB.GetLootFilters().quality or -1
-        if q < 0 then return "Any" end
-        return qualityName(q) or "Any"
+        if q < 0 then return L["Any"] end
+        return qualityName(q) or L["Any"]
     end, function(dir)
         local q = (TB.GetLootFilters and TB.GetLootFilters().quality) or -1
         q = q + dir
         if q < -1 then q = 6 end
         if q > 6 then q = -1 end
         if TB.SetLootFilter then TB.SetLootFilter("quality", q) end
-    end, "Item quality")
+    end, L["Item quality"])
     tab.typeStep = stepper(404, 76, function()
         local t = (TB.GetLootFilters and TB.GetLootFilters().rowType) or "all"
-        if t == "items" then return "Items" end
-        if t == "rolls" then return "Rolls" end
-        return "All"
+        if t == "items" then return L["Items"] end
+        if t == "rolls" then return L["Rolls"] end
+        return L["All"]
     end, function(dir)
         local t = (TB.GetLootFilters and TB.GetLootFilters().rowType) or "all"
         local idx = 1
@@ -551,7 +573,7 @@ function TB.CreateLootTab(parent)
         if idx < 1 then idx = table.getn(ROW_TYPES) end
         if idx > table.getn(ROW_TYPES) then idx = 1 end
         if TB.SetLootFilter then TB.SetLootFilter("rowType", ROW_TYPES[idx]) end
-    end, "Row type: items, rolls, or all")
+    end, L["Row type: items, rolls, or all"])
 
     local scroll = CreateFrame("ScrollFrame", "TortoiseBotsManagerLootScroll", tab, "FauxScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", tab, "TOPLEFT", 0, -46)
@@ -592,7 +614,7 @@ function TB.CreateLootTab(parent)
     empty:SetPoint("CENTER", scroll, "CENTER", 0, 0)
     empty:SetWidth(tw - 40)
     empty:SetJustifyH("CENTER")
-    empty:SetText("|cff888888No loot yet. Your party bots' loot and rolls land here.|r")
+    empty:SetText("|cff888888" .. L["No loot yet. Your party bots' loot and rolls land here."] .. "|r")
     TB.SetTextColor(empty, color("muted"))
     tab.emptyMsg = empty
 

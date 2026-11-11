@@ -11,6 +11,7 @@
 -- arrive as ordinary whispers on the command-op gate.
 
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C or {}
 local COL = C.COLOR or {}
 local VW = 300
@@ -128,10 +129,10 @@ function TB.RequestBank(name)
     -- The proxy acks with "Forwarded command" but no completion line ever
     -- follows a list query, so the command op is completed on send: leaving
     -- it would show a working state until it times out.
-    if TB.CompleteOperation then TB.CompleteOperation(name, "command", true, "Bank query sent.") end
+    if TB.CompleteOperation then TB.CompleteOperation(name, "command", true, L["Bank query sent."]) end
     local st = TB.GetState and TB.GetState(name) or nil
     if st then st.pendingAI = nil; st.pendingAIUntil = nil end
-    if TB.SetStatus then TB.SetStatus("Asking " .. name .. " to open its bank…", "pending") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["Asking %s to open its bank…"], name), "pending") end
     if TB.RefreshVault then TB.RefreshVault() end
     return sent
 end
@@ -146,10 +147,10 @@ function TB.RequestMailbox(name)
     v.at = now()
     -- Same as above: no completion line follows the "Forwarded" ack.
     local sent = TB.SendBotCommand("command " .. name .. " mail ?")
-    if TB.CompleteOperation then TB.CompleteOperation(name, "command", true, "Mailbox query sent.") end
+    if TB.CompleteOperation then TB.CompleteOperation(name, "command", true, L["Mailbox query sent."]) end
     local st = TB.GetState and TB.GetState(name) or nil
     if st then st.pendingAI = nil; st.pendingAIUntil = nil end
-    if TB.SetStatus then TB.SetStatus("Asking " .. name .. " to check its mail…", "pending") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["Asking %s to check its mail…"], name), "pending") end
     if TB.RefreshVault then TB.RefreshVault() end
     return sent
 end
@@ -160,7 +161,7 @@ function TB.SendBankWithdraw(name, id, label)
     name = norm(name)
     id = tonumber(id)
     if not name or not id then return false end
-    if TB.SetStatus then TB.SetStatus(name .. " takes " .. (label or ("item " .. id)) .. " from its bank…", "pending") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["%s takes %s from its bank…"], name, label or ("#" .. tostring(id))), "pending") end
     return TB.SendBotCommand("command " .. name .. " bank -|Hitem:" .. id .. ":0:0:0|h[" .. (label or ("item " .. id)) .. "]|h")
 end
 
@@ -168,7 +169,7 @@ function TB.SendMailTake(name, n)
     name = norm(name)
     n = tonumber(n)
     if not name or not n then return false end
-    if TB.SetStatus then TB.SetStatus(name .. " takes letter #" .. n .. "…", "pending") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["%s takes letter #%s…"], name, tostring(n)), "pending") end
     return TB.SendBotCommand("command " .. name .. " mail take " .. n)
 end
 
@@ -240,10 +241,10 @@ local function createVault()
     TB.StyleCloseButton(close, -7, -6)
     close:SetScript("OnClick", function() TB.CloseVault() end)
 
-    vault.tabBank = makeTab(vault, "Bank", 10, 68, "bank")
-    setTooltip(vault.tabBank, "Bank", { "What this bot keeps in its bank." })
-    vault.tabMail = makeTab(vault, "Mailbox", 82, 76, "mail")
-    setTooltip(vault.tabMail, "Mailbox", { "Letters waiting for this bot." })
+    vault.tabBank = makeTab(vault, L["Bank"], 10, 68, "bank")
+    setTooltip(vault.tabBank, L["Bank"], { L["What this bot keeps in its bank."] })
+    vault.tabMail = makeTab(vault, L["Mailbox"], 82, 76, "mail")
+    setTooltip(vault.tabMail, L["Mailbox"], { L["Letters waiting for this bot."] })
 
     local summary = vault:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     summary:SetPoint("TOPLEFT", vault, "TOPLEFT", 12, -62)
@@ -269,12 +270,12 @@ local function createVault()
     local ask = TB.StyleButton(CreateFrame("Button", nil, vault, "UIPanelButtonTemplate"))
     ask:SetWidth(134); ask:SetHeight(22)
     ask:SetPoint("TOPLEFT", vault, "TOPLEFT", 12, -80 - ROWS * 22)
-    ask:SetText("Ask again")
+    ask:SetText(L["Ask again"])
     ask:SetScript("OnClick", function()
         if not currentBot then return end
         if currentView == "mail" then TB.RequestMailbox(currentBot) else TB.RequestBank(currentBot) end
     end)
-    setTooltip(ask, "Ask again", { "Reloads this list from the bot." })
+    setTooltip(ask, L["Ask again"], { L["Reloads this list from the bot."] })
     vault.ask = ask
 
     local prev = TB.StyleButton(CreateFrame("Button", nil, vault, "UIPanelButtonTemplate"))
@@ -298,7 +299,7 @@ local function createVault()
     local hint = vault:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     hint:SetPoint("TOPLEFT", vault, "TOPLEFT", 150, -62)
     hint:SetWidth(VW - 162); hint:SetJustifyH("RIGHT")
-    hint:SetText("Click a row to take it.")
+    hint:SetText(L["Click a row to take it."])
     TB.SetTextColor(hint, color("muted"))
     vault.hint = hint
 
@@ -323,10 +324,10 @@ local function renderRows()
             row.itemId, row.itemName, row.mailN = item.id, item.name, item.n
             if currentView == "mail" then
                 row:SetText(item.text)
-                setTooltip(row, "Letter #" .. item.n, { item.text, "Click: take this letter." })
+                setTooltip(row, string.format(L["Letter #%s"], tostring(item.n)), { item.text, L["Click: take this letter."] })
             else
                 row:SetText((item.count and item.count > 1 and (item.name .. " x" .. item.count)) or item.name)
-                setTooltip(row, item.name, { "Click: the bot takes this from its bank." })
+                setTooltip(row, item.name, { L["Click: the bot takes this from its bank."] })
             end
             row:Show()
             row:Enable()
@@ -340,10 +341,10 @@ local function renderRows()
     if page > 1 then vault.prevPage:Enable() else vault.prevPage:Disable() end
     if page < pages then vault.nextPage:Enable() else vault.nextPage:Disable() end
     if v and v.pending and table.getn(list) == 0 then
-        vault.ask:SetText("Asking…")
+        vault.ask:SetText(L["Asking…"])
         vault.ask:Disable()
     else
-        vault.ask:SetText("Ask again")
+        vault.ask:SetText(L["Ask again"])
         vault.ask:Enable()
     end
     return list
@@ -360,9 +361,9 @@ function TB.RefreshVault()
     local v = vaults[currentBot]
     local list = renderRows()
     if currentView == "mail" then
-        vault.summary:SetText((v and table.getn(list) .. " letter(s)") or "Loading…")
+        vault.summary:SetText((v and string.format(L["%s letter(s)"], table.getn(list))) or L["Loading…"])
     else
-        vault.summary:SetText((v and table.getn(list) .. " item(s) in bank") or "Loading…")
+        vault.summary:SetText((v and string.format(L["%s item(s) in bank"], table.getn(list))) or L["Loading…"])
     end
     vault.tabBank:Enable(); vault.tabMail:Enable()
     if currentView == "mail" then vault.tabMail:Disable() else vault.tabBank:Disable() end

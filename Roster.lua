@@ -9,6 +9,7 @@
 -- snapshot has completed.
 
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C or {}
 local S = C.STATUS or {
     OFFLINE = "offline", OFFLINE_PENDING = "offline-pending", UNKNOWN = "unknown",
@@ -304,16 +305,15 @@ end
 local function commitAltSummary(rows)
     local count = table.getn(rows)
     if count == 0 then
-        if TB.LogMessage then TB.LogMessage("No alt-bots are playing on their own.") end
-        if TB.SetStatus then TB.SetStatus("No alt-bots are playing on their own.", "muted") end
+        if TB.LogMessage then TB.LogMessage(L["No alt-bots are playing on their own."]) end
+        if TB.SetStatus then TB.SetStatus(L["No alt-bots are playing on their own."], "muted") end
         return
     end
     for _, row in ipairs(rows) do
         if TB.LogMessage then TB.LogMessage(row.text) end
     end
     if TB.SetStatus then
-        local label = "Alt summary · " .. count .. " alt-bot"
-        if count ~= 1 then label = label .. "s" end
+        local label = string.format(count == 1 and L["Alt summary · %s alt-bot"] or L["Alt summary · %s alt-bots"], count)
         TB.SetStatus(label, "ok")
     end
 end
@@ -560,7 +560,7 @@ end
 -- Ask every alt-bot playing on its own what it did while the player was
 -- away. The server answers with TBM:ALTSUM lines and TBM:ALTSUM_END.
 function TB.RequestAltSummary()
-    if TB.SetStatus then TB.SetStatus("Asking your alt-bots for a summary…", "pending") end
+    if TB.SetStatus then TB.SetStatus(L["Asking your alt-bots for a summary…"], "pending") end
     return TB.SendBotCommand("alts")
 end
 
@@ -804,7 +804,7 @@ function TB.CompleteOperation(name, verb, success, message)
         if st.online then st.status = st.enteredWorld and S.ONLINE or S.STARTING
         else st.status = S.OFFLINE end
     else
-        st.lastError = message or "Command failed."
+        st.lastError = message or L["Command failed."]
         if (verb == "remove" or verb == "logout") and st.online then st.status = S.ONLINE
         elseif st.online then st.status = st.enteredWorld and S.ONLINE or S.STARTING
         else st.status = S.OFFLINE end
@@ -847,7 +847,7 @@ function TB.UpdateStateTimers(current)
             changed = true
         end
     end
-    if timedOutName and TB.SetStatus then TB.SetStatus(timedOutName .. ": operation timed out.", "warn") end
+    if timedOutName and TB.SetStatus then TB.SetStatus(string.format(L["%s: operation timed out."], timedOutName), "warn") end
     if changed and TB.Refresh then TB.Refresh() end
 end
 
@@ -1194,14 +1194,14 @@ gf:SetScript("OnEvent", function()
     for name, st in pairs(state) do
         if st.source == "snapshot" then st.group = members[name] and true or false end
         if st.operation and st.operation.verb == "invite" and members[name] then
-            local completed = TB.CompleteOperation(name, "invite", true, "Group invite accepted.")
+            local completed = TB.CompleteOperation(name, "invite", true, L["Group invite accepted."])
             if completed and TB.OnRosterBatchInviteJoined then
                 TB.OnRosterBatchInviteJoined(name)
             end
         elseif members[name] and TB.OnRosterBatchInviteJoined then
             TB.OnRosterBatchInviteJoined(name)
         elseif st.operation and st.operation.verb == "uninvite" and not members[name] then
-            TB.CompleteOperation(name, "uninvite", true, "Bot left your group.")
+            TB.CompleteOperation(name, "uninvite", true, L["Bot left your group."])
         end
     end
     for name, st in pairs(claimedState) do
@@ -1377,9 +1377,9 @@ function TB.ConfirmReleaseClaimedBot(name)
     if not name then return end
     if StaticPopupDialogs and StaticPopup_Show then
         StaticPopupDialogs["TORTOISE_RELEASE_CLAIMED_BOT"] = {
-            text = "Release " .. name .. " back to the wandering bot pool?\n\nThis will remove them from your guild and clear gear protection.",
-            button1 = "Release",
-            button2 = "Cancel",
+            text = string.format(TB.L["Release %s back to the wandering bot pool?\n\nThis will remove them from your guild and clear gear protection."], name),
+            button1 = (TB.HasTranslation("Release (bot)") and TB.L["Release (bot)"] or "Release"),
+            button2 = TB.L["Cancel"],
             OnAccept = function()
                 TB.ReleaseClaimedBot(name)
             end,
@@ -1403,7 +1403,7 @@ function TB.ReleaseClaimedBot(name)
     else
         SendChatMessage("/gkick " .. name)
     end
-    if TB.SetStatus then TB.SetStatus("Released " .. name .. " from guild.", "ok") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["Released %s from guild."], name), "ok") end
     if TB.RequestPollSoon then TB.RequestPollSoon(1.0) end
 end
 

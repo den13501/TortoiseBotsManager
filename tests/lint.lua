@@ -62,7 +62,7 @@ local WOW_GLOBALS = set({
     "GetItemQualityColor", "PickupContainerItem", "SplitContainerItem", "ClearCursor",
     "CursorHasItem",
     -- misc
-    "GetTime", "GetCursorPosition", "GetScreenHeight", "GetScreenWidth", "GetRealZoneText",
+    "GetTime", "GetLocale", "GetCursorPosition", "GetScreenHeight", "GetScreenWidth", "GetRealZoneText",
     "GetZoneText", "IsInInstance", "IsShiftKeyDown", "PlaySound", "SendAddonMessage",
     "SendChatMessage",
     -- key bindings (C API plus FrameXML UIParent.lua)
@@ -213,7 +213,7 @@ end
 
 local files = tocFiles()
 for _, rel in ipairs(files) do
-    local path = root .. "/" .. rel
+    local path = root .. "/" .. string.gsub(rel, "\\", "/")
     local src = read(path)
     if not src then
         bad(rel .. ": listed in the .toc but missing")

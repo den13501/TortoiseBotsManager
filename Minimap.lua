@@ -1,5 +1,6 @@
 -- TortoiseBotsManager/Minimap.lua — draggable minimap button. No business logic here.
 local TB = TortoiseBots
+local L = TB.L
 local C  = TB.C
 
 function TB.InitMinimap()
@@ -33,19 +34,19 @@ function TB.InitMinimap()
     updatePos()
 
     btn:SetScript("OnClick", function()
-        if arg1 == "RightButton" then TB.PollList(true); TB.Print("Polling…")
+        if arg1 == "RightButton" then TB.PollList(true); TB.Print(TB.L["Polling…"])
         elseif arg1 == "MiddleButton" then if TB.ToggleSettings then TB.ToggleSettings() end
         else TB.Toggle() end
     end)
     btn:SetScript("OnEnter", function()
         GameTooltip:SetOwner(this, "ANCHOR_LEFT")
-        GameTooltip:SetText("TortoiseBots Manager")
-        GameTooltip:AddLine("Left-click: toggle (/tbm)", 1,1,1)
-        GameTooltip:AddLine("Right-click: refresh list", 1,1,1)
-        GameTooltip:AddLine("Middle-click: options (/tbm settings)", 1,1,1)
-        GameTooltip:AddLine("Drag: move button", C.COLOR.muted[1], C.COLOR.muted[2], C.COLOR.muted[3])
+        GameTooltip:SetText(L["TortoiseBots Manager"])
+        GameTooltip:AddLine(L["Left-click: toggle (/tbm)"], 1,1,1)
+        GameTooltip:AddLine(L["Right-click: refresh list"], 1,1,1)
+        GameTooltip:AddLine(L["Middle-click: options (/tbm settings)"], 1,1,1)
+        GameTooltip:AddLine(L["Drag: move button"], C.COLOR.muted[1], C.COLOR.muted[2], C.COLOR.muted[3])
         local online = 0; for _, s in pairs(TB.GetAllState()) do if s.online then online = online + 1 end end
-        GameTooltip:AddLine(online .. " online", C.COLOR.blue[1], C.COLOR.blue[2], C.COLOR.blue[3])
+        GameTooltip:AddLine(string.format(TB.L["%s online"], tostring(online)), C.COLOR.blue[1], C.COLOR.blue[2], C.COLOR.blue[3])
         GameTooltip:Show()
     end)
     btn:SetScript("OnLeave", function() GameTooltip:Hide() end)

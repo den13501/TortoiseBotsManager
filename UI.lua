@@ -10,6 +10,7 @@
 -- Comms.lua for callers that still use the legacy raw command API.
 
 local TB = TortoiseBots
+local L = TB.L
 local C  = TB.C or {}
 local W, H = C.PANEL_W or 500, C.PANEL_H or 395
 local ROW_H, ROW_N = C.ROW_H or 28, C.ROW_N or 7
@@ -86,8 +87,8 @@ end
 
 function TB.GetActionScopeHint()
     local scope, name = targetScope()
-    if scope == "party" then return "Party actions" end
-    return "Target: " .. name
+    if scope == "party" then return L["Party actions"] end
+    return string.format(L["Target: %s"], name)
 end
 
 -- Newer server features are advertised in the roster's TBM:CAPS trailer.
@@ -101,37 +102,37 @@ local function serverSupports(command)
 end
 
 local ACTION_TOOLTIPS = {
-    attack   = "Bots attack your target. Healers keep healing. Needs an enemy target.",
-    stop     = "Bots stop fighting and drop their target (heals still run).",
-    pull     = "The tank pulls your target and fights it where it stands. The others wait for the timer below, then join.",
-    follow   = "Bots follow you in the chosen formation.",
-    stay     = "Bots hold their current position.",
-    come     = "Bots run to where you stand and stay there (good for corner pulls).",
-    hold     = "Bots run to where you stand and stay there (good for corner pulls).",
-    guard    = "Bots plant themselves where they stand and fight anything close.",
-    free     = "Bots leave their guard posts and move freely again.",
-    ["stance near"]     = "Default scrum: melee crowds close around the target.",
-    ["stance tank"]     = "Tank goes toe-to-toe, turning the target away from the party.",
-    ["stance turnback"] = "Melee holds the far side of the target, away from your casters.",
-    ["stance behind"]   = "Melee works the target's rear, clear of frontal cleaves.",
-    ["focus skull"] = "Marks your target with Skull (or uses the existing Skull) and every DPS bot focuses it.",
-    ["cc moon"]     = "Opens the Marks panel: give each raid icon to one bot, which keeps that mob crowd-controlled.",
-    aoe      = "Area-of-effect spells for DPS bots.",
-    ready    = "Ready check: bots report health, mana and drinks.",
-    interrupt = "The best bot with a ready interrupt stops your target's cast.",
-    flee     = "Get out: bots stop fighting and run after you without attacking. Attack, Pull, Follow or Stay brings them back.",
-    ["strategy ~kite"]     = "Bots keep their distance from enemies while fighting.",
-    ["strategy ~mark rti"] = "Bots mark the next target with Skull on their own when the fight starts.",
-    ["strategy ~focus"]    = "Every DPS bot burns down one target instead of spreading damage.",
-    ["strategy ~aoe fear"] = "Bots may use fear effects against groups. Held back inside instances.",
-    sell     = "Bots sell their grey junk to a vendor near you.",
-    learn    = "Target a class trainer first: bots of that class learn every spell they can pay for (with their own gold).",
-    release  = "Dead bots release their spirit; once they are ghosts this button turns into Corpse run.",
-    rebuff   = "Bots re-cast missing group buffs.",
-    ["totem party drop"] = "Shaman bots drop totems.",
-    downtime = "Send this alt to its class trainer, vendor and repair, then back to you.",
-    ["strategy +grind"] = "Bots grind on their own.",
-    ["strategy reset"] = "Strategy changes back to defaults.",
+    attack   = L["Bots attack your target. Healers keep healing. Needs an enemy target."],
+    stop     = L["Bots stop fighting and drop their target (heals still run)."],
+    pull     = L["The tank pulls your target and fights it where it stands. The others wait for the timer below, then join."],
+    follow   = L["Bots follow you in the chosen formation."],
+    stay     = L["Bots hold their current position."],
+    come     = L["Bots run to where you stand and stay there (good for corner pulls)."],
+    hold     = L["Bots run to where you stand and stay there (good for corner pulls)."],
+    guard    = L["Bots plant themselves where they stand and fight anything close."],
+    free     = L["Bots leave their guard posts and move freely again."],
+    ["stance near"]     = L["Default scrum: melee crowds close around the target."],
+    ["stance tank"]     = L["Tank goes toe-to-toe, turning the target away from the party."],
+    ["stance turnback"] = L["Melee holds the far side of the target, away from your casters."],
+    ["stance behind"]   = L["Melee works the target's rear, clear of frontal cleaves."],
+    ["focus skull"] = L["Marks your target with Skull (or uses the existing Skull) and every DPS bot focuses it."],
+    ["cc moon"]     = L["Opens the Marks panel: give each raid icon to one bot, which keeps that mob crowd-controlled."],
+    aoe      = L["Area-of-effect spells for DPS bots."],
+    ready    = L["Ready check: bots report health, mana and drinks."],
+    interrupt = L["The best bot with a ready interrupt stops your target's cast."],
+    flee     = L["Get out: bots stop fighting and run after you without attacking. Attack, Pull, Follow or Stay brings them back."],
+    ["strategy ~kite"]     = L["Bots keep their distance from enemies while fighting."],
+    ["strategy ~mark rti"] = L["Bots mark the next target with Skull on their own when the fight starts."],
+    ["strategy ~focus"]    = L["Every DPS bot burns down one target instead of spreading damage."],
+    ["strategy ~aoe fear"] = L["Bots may use fear effects against groups. Held back inside instances."],
+    sell     = L["Bots sell their grey junk to a vendor near you."],
+    learn    = L["Target a class trainer first: bots of that class learn every spell they can pay for (with their own gold)."],
+    release  = L["Dead bots release their spirit; once they are ghosts this button turns into Corpse run."],
+    rebuff   = L["Bots re-cast missing group buffs."],
+    ["totem party drop"] = L["Shaman bots drop totems."],
+    downtime = L["Send this alt to its class trainer, vendor and repair, then back to you."],
+    ["strategy +grind"] = L["Bots grind on their own."],
+    ["strategy reset"] = L["Strategy changes back to defaults."],
 }
 
 function TB.ActionTooltip(intent)
@@ -203,17 +204,17 @@ function TB.BuildGuildRowMenu(name, addButton)
     local order = orderCap and TB.GetBotOrder and TB.GetBotOrder(name) or nil
     local mayOrder = orderCap and TB.CanGiveOrders and TB.CanGiveOrders() or false
     if order and TB.ConfirmOrderCancel then
-        addButton({ text = "Cancel order", notCheckable = 1, disabled = not mayOrder,
+        addButton({ text = L["Cancel order"], notCheckable = 1, disabled = not mayOrder,
             func = function() TB.ConfirmOrderCancel(name) end })
         count = count + 1
     end
     if order and order.parent and TB.OpenOrderReassignMenu then
-        addButton({ text = "Move sub-order", notCheckable = 1, disabled = not mayOrder,
+        addButton({ text = L["Move sub-order"], notCheckable = 1, disabled = not mayOrder,
             func = function() TB.OpenOrderReassignMenu(name, nil) end })
         count = count + 1
     end
     if TB.ConfirmReleaseClaimedBot then
-        addButton({ text = "Release", notCheckable = 1,
+        addButton({ text = (TB.HasTranslation("Release (bot)") and L["Release (bot)"] or "Release"), notCheckable = 1,
             func = function() TB.ConfirmReleaseClaimedBot(name) end })
         count = count + 1
     end
@@ -235,11 +236,11 @@ function TB.BuildRosterRowMenu(name, addButton)
     if not name or name == "" then return 0 end
     local count = 0
     local pairs = {
-        { action = "login", label = "Login", verb = "add" },
-        { action = "logout", label = "Logout", verb = "logout" },
-        { action = "invite", label = "Invite to group", verb = "invite" },
-        { action = "kick", label = "Kick from group", verb = "uninvite" },
-        { action = "summon", label = "Summon", verb = "summon" },
+        { action = "login", label = L["Login"], verb = "add" },
+        { action = "logout", label = L["Logout"], verb = "logout" },
+        { action = "invite", label = L["Invite to group"], verb = "invite" },
+        { action = "kick", label = L["Kick from group"], verb = "uninvite" },
+        { action = "summon", label = L["Summon"], verb = "summon" },
     }
     for _, pair in ipairs(pairs) do
         if TB.IsRosterActionEligible and TB.IsRosterActionEligible(name, pair.action) then
@@ -652,16 +653,16 @@ CreateHeader = function(parent)
     local mini = TB.StyleButton(CreateFrame("Button", nil, parent, "UIPanelButtonTemplate"), "mode")
     mini:SetWidth(40); mini:SetHeight(18)
     mini:SetPoint("RIGHT", close, "LEFT", -4, 0)
-    mini:SetText("Mini")
-    setButtonTooltip(mini, "Swap this window for a small bar with the fight buttons. Its + button brings the window back. Also /tbm mini.", "Mini mode")
+    mini:SetText(L["Mini"])
+    setButtonTooltip(mini, L["Swap this window for a small bar with the fight buttons. Its + button brings the window back. Also /tbm mini."], L["Mini mode"])
     mini:SetScript("OnClick", function() TB.RequestMode("mini") end)
     TB.miniButton = mini
     -- Info: the server's version and switches (ServerInfo.lua).
     local info = TB.StyleButton(CreateFrame("Button", nil, parent, "UIPanelButtonTemplate"), "mode")
     info:SetWidth(40); info:SetHeight(18)
     info:SetPoint("RIGHT", mini, "LEFT", -4, 0)
-    info:SetText("Info")
-    setButtonTooltip(info, "What this server has switched on: dungeon runs, hiring, world buffs and more.", "Server info")
+    info:SetText(L["Info"])
+    setButtonTooltip(info, L["What this server has switched on: dungeon runs, hiring, world buffs and more."], L["Server info"])
     info:SetScript("OnClick", function() if TB.ToggleServerInfo then TB.ToggleServerInfo() end end)
     TB.infoButton = info
     -- Issue #33: the mouse-enabled drag bar spans the header corner over these
@@ -680,7 +681,7 @@ end
 local CLASS_CHIP_IDS = { nil, 1, 2, 3, 4, 5, 7, 8, 9, 11 }
 
 local function classChipLabel(classId)
-    if classId == nil then return "All" end
+    if classId == nil then return L["All"] end
     if classId == 6 then return "DK" end
     local name = (C.CLASS_NAMES and C.CLASS_NAMES[classId]) or ("#" .. tostring(classId))
     return name
@@ -700,11 +701,11 @@ local function createRosterClassChips(parent)
     for i = 1, table.getn(CLASS_CHIP_IDS) do
         local id = CLASS_CHIP_IDS[i]
         local width = (id == nil) and 34 or 24
-        local chip = TB.UI.CreateTogglePill(parent, (id == nil) and "All" or nil, width, 20, {
+        local chip = TB.UI.CreateTogglePill(parent, (id == nil) and L["All"] or nil, width, 20, {
             point = "TOPLEFT",
             x = x,
             y = -24,
-            tip = (id == nil) and "Show every class" or ("Show only " .. ((C.CLASS_NAMES and C.CLASS_NAMES[id]) or "this class") .. " bots"),
+            tip = (id == nil) and L["Show every class"] or string.format(L["Show only %s bots"], (C.CLASS_NAMES and C.CLASS_NAMES[id]) or L["this class"]),
             tipTitle = classChipLabel(id),
             onClick = function()
                 TB.classFilter = id
@@ -730,7 +731,7 @@ local function createRosterClassChips(parent)
     end
     local caption = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     caption:SetPoint("LEFT", chips[table.getn(chips)], "RIGHT", 8, 0)
-    caption:SetText("Filter by class")
+    caption:SetText(L["Filter by class"])
     TB.SetTextColor(caption, color("faint"))
     TB.classChips = chips
     TB.PaintClassChips()
@@ -749,12 +750,12 @@ CreateFilterRow = function(parent)
         TB.Refresh()
     end)
     TB.searchBox = search
-    TB.StyleEditBox(search, "Search by name")
+    TB.StyleEditBox(search, L["Search by name"])
 
     local clear = TB.StyleButton(CreateFrame("Button", nil, parent, "UIPanelButtonTemplate"), "mode")
     clear:SetWidth(42); clear:SetHeight(20)
     clear:SetPoint("LEFT", search, "RIGHT", 4, 0)
-    clear:SetText("Clear")
+    clear:SetText(L["Clear"])
     clear:SetScript("OnClick", function()
         search:SetText("")
         search:ClearFocus()
@@ -801,7 +802,7 @@ local function createRosterColumnHeaders(parent)
     checkAll:SetWidth(20); checkAll:SetHeight(20)
     checkAll:SetPoint("TOPLEFT", parent, "TOPLEFT", 5, -48)
     TB.StyleCheckButton(checkAll)
-    setButtonTooltip(checkAll, "Select or deselect all bots")
+    setButtonTooltip(checkAll, L["Select or deselect all bots"])
     checkAll:SetScript("OnClick", function()
         local isChecked = this:GetChecked() and true or false
         TB.SelectAllRoster(isChecked)
@@ -810,10 +811,10 @@ local function createRosterColumnHeaders(parent)
 
     local left = 46
     local headers = {
-        { text = "Name", width = (C.ROSTER_NAME_W or 112) - 17, sortKey = "name" },
-        { text = "Class", width = C.ROSTER_CLASS_W or 70, sortKey = "class" },
-        { text = "Status", width = C.ROSTER_STATUS_W or 138, sortKey = "status" },
-        { text = "Last location", width = 88, sortKey = nil },
+        { text = L["Name"], width = (C.ROSTER_NAME_W or 112) - 17, sortKey = "name" },
+        { text = L["Class"], width = C.ROSTER_CLASS_W or 70, sortKey = "class" },
+        { text = L["Status"], width = C.ROSTER_STATUS_W or 138, sortKey = "status" },
+        { text = L["Last location"], width = 88, sortKey = nil },
     }
     parent.headerBtns = {}
     local x = left
@@ -830,7 +831,7 @@ local function createRosterColumnHeaders(parent)
         fs:SetJustifyH("LEFT")
         if header.sortKey then
             btn.sortKey = header.sortKey
-            setButtonTooltip(btn, "Sort by " .. string.lower(header.text))
+            setButtonTooltip(btn, string.format(L["Sort by %s"], string.lower(header.text)))
             btn:SetScript("OnClick", function()
                 if TB.SetRosterSort then TB.SetRosterSort(this.sortKey) end
             end)
@@ -923,12 +924,12 @@ CreateRow = function(parent, scroll, index)
         GameTooltip:SetText(entry.name)
         GameTooltip:AddLine(TB.StatusText(entry.st, entry.inGroup), 1, 1, 1)
         if entry.st and entry.st.altBot then
-            GameTooltip:AddLine("Login takes it back as your companion, Logout logs it out.", COL.muted[1], COL.muted[2], COL.muted[3], true)
+            GameTooltip:AddLine(L["Login takes it back as your companion, Logout logs it out."], COL.muted[1], COL.muted[2], COL.muted[3], true)
         end
         if TB.BuildRosterRowMenu and TB.BuildRosterRowMenu(entry.name, function() end) > 0 then
-            GameTooltip:AddLine("Right-click for more actions.", COL.muted[1], COL.muted[2], COL.muted[3])
+            GameTooltip:AddLine(L["Right-click for more actions."], COL.muted[1], COL.muted[2], COL.muted[3])
         end
-        if entry.location then GameTooltip:AddLine("Last: " .. entry.location, COL.muted[1], COL.muted[2], COL.muted[3]) end
+        if entry.location then GameTooltip:AddLine(string.format(L["Last: %s"], entry.location), COL.muted[1], COL.muted[2], COL.muted[3]) end
         GameTooltip:Show()
     end)
     row:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -950,7 +951,7 @@ local function lifecycleCommand(action, verb)
         end
     end
     if table.getn(names) == 0 and TB.SetStatus then
-        TB.SetStatus("No eligible selected bots.", "muted")
+        TB.SetStatus(L["No eligible selected bots."], "muted")
     end
 end
 
@@ -980,34 +981,34 @@ CreateRosterBar = function(parent)
     end
 
     local BW, GAP = 92, 5
-    local login  = button("Login", BW, "login", "add", "Log in selected offline owned bots; on an alt-bot playing alone, take it back as your companion")
+    local login  = button(L["Login"], BW, "login", "add", L["Log in selected offline owned bots; on an alt-bot playing alone, take it back as your companion"])
     login:SetPoint("LEFT", bar, "LEFT", 0, -13)
-    local logout = button("Logout", BW, "logout", "logout", "Log out selected online owned bots")
+    local logout = button(L["Logout"], BW, "logout", "logout", L["Log out selected online owned bots"])
     logout:SetPoint("LEFT", login, "RIGHT", GAP, 0)
-    local invite = button("Invite", BW, "invite", "invite", "Invite selected online bots not in your group")
+    local invite = button(L["Invite"], BW, "invite", "invite", L["Invite selected online bots not in your group"])
     invite:SetPoint("LEFT", logout, "RIGHT", GAP, 0)
-    local kick   = button("Kick", BW, "kick", "uninvite", "Kick selected online bots from your group", "danger")
+    local kick   = button(L["Kick"], BW, "kick", "uninvite", L["Kick selected online bots from your group"], "danger")
     kick:SetPoint("LEFT", invite, "RIGHT", GAP, 0)
-    local summon = button("Summon", BW, "summon", "summon", "Summon selected online bots")
+    local summon = button(L["Summon"], BW, "summon", "summon", L["Summon selected online bots"])
     summon:SetPoint("LEFT", kick, "RIGHT", GAP, 0)
-    local altsummary = TB.UI.CreateButton(bar, "Alt summary", 88, 18, {
+    local altsummary = TB.UI.CreateButton(bar, L["Alt summary"], 88, 18, {
         onClick = function()
             if TB.RequestAltSummary then TB.RequestAltSummary() end
         end,
-        tip = "Ask each alt-bot playing on its own what it did while you were away. The answers appear in the Log tab, one line per alt-bot.",
+        tip = L["Ask each alt-bot playing on its own what it did while you were away. The answers appear in the Log tab, one line per alt-bot."],
     })
     altsummary.flatKind = "mode"; TB.PaintButton(altsummary)
     altsummary:SetPoint("LEFT", bar, "LEFT", W - (C.PAD or 10) * 2 - 88, 15)
-    local fill = TB.UI.CreateButton(bar, "Fill party", 72, 18, {
+    local fill = TB.UI.CreateButton(bar, L["Fill party"], 72, 18, {
         onClick = function()
             local names = TB.GetFillPartyNames and TB.GetFillPartyNames() or {}
             if table.getn(names) > 0 and TB.QueueRosterBatch then
                 TB.QueueRosterBatch("invite", names)
             elseif TB.SetStatus then
-                TB.SetStatus("No bots to fill the party.", "muted")
+                TB.SetStatus(L["No bots to fill the party."], "muted")
             end
         end,
-        tip = "Invite online bots until the party is full (5). Needs no selection.",
+        tip = L["Invite online bots until the party is full (5). Needs no selection."],
     })
     fill.flatKind = "mode"; TB.PaintButton(fill)
     fill:SetPoint("LEFT", bar, "LEFT", W - (C.PAD or 10) * 2 - 88 - GAP - 72, 15)
@@ -1059,8 +1060,8 @@ local function makeActionButton(parent, intent, width, x, y)
         intent = intent,
         icon = icon,
         raidIcon = raidIcon,
-        tip = ((def and def.tip) or ACTION_TOOLTIPS[intent] or ("Send .bot action " .. intent))
-            .. (def and " Right-click: pin it to the mini bar." or ""),
+        tip = ((def and def.tip) or ACTION_TOOLTIPS[intent] or string.format(L["Send .bot action %s"], intent))
+            .. (def and (" " .. L["Right-click: pin it to the mini bar."]) or ""),
         tipTitle = label,
         onClick = function()
             if arg1 == "RightButton" and def and TB.ToggleMiniFavorite then
@@ -1116,14 +1117,14 @@ local function BuildScopeCard(parent)
     TB.scopeNote = note
 
     -- Shown while one of your bots is targeted: opens its gear/bags panel.
-    local gearButton = TB.UI.CreateButton(scopeCard, "Gear & bags", 104, 22, {
+    local gearButton = TB.UI.CreateButton(scopeCard, L["Gear & bags"], 104, 22, {
         point = "RIGHT",
         relTo = scopeCard,
         relPoint = "RIGHT",
         x = -8,
         y = 0,
-        tip = "Open the targeted bot's gear, bags and behaviour.",
-        tipTitle = "Gear & bags",
+        tip = L["Open the targeted bot's gear, bags and behaviour."],
+        tipTitle = L["Gear & bags"],
         onClick = function()
             local _, name = targetScope()
             if name and TB.OpenBotPanel then TB.OpenBotPanel(name) end
@@ -1152,14 +1153,14 @@ local function BuildCcMenu(parent, buttons)
     TB.AddWindowHeader(ccMenu, 20)
     local ccTitle = ccMenu:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     ccTitle:SetPoint("TOPLEFT", ccMenu, "TOPLEFT", 8, -6)
-    ccTitle:SetText("CC MARKS")
+    ccTitle:SetText(L["CC MARKS"])
     TB.SetTextColor(ccTitle, color("title"))
 
     local ccHint = ccMenu:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     ccHint:SetPoint("TOPLEFT", ccMenu, "TOPLEFT", 8, -24)
     ccHint:SetWidth(254)
     ccHint:SetJustifyH("LEFT")
-    ccHint:SetText("Assign each mark to one bot by name.")
+    ccHint:SetText(L["Assign each mark to one bot by name."])
     TB.SetTextColor(ccHint, color("muted"))
     ccMenu.hint = ccHint
 
@@ -1189,13 +1190,13 @@ local function BuildCcMenu(parent, buttons)
         ownerText:SetText("-")
         TB.SetTextColor(ownerText, color("muted"))
 
-        local cycleButton = TB.UI.CreateButton(row, "Next", 64, 20, {
+        local cycleButton = TB.UI.CreateButton(row, L["Next"], 64, 20, {
             point = "LEFT",
             relTo = row,
             relPoint = "LEFT",
             x = 164,
             y = 0,
-            tip = "Assign " .. mark.label .. " to the next online bot by name",
+            tip = string.format(L["Assign %s to the next online bot by name"], mark.label),
             onClick = function()
                 local cands = TB.GetCcCandidates and TB.GetCcCandidates() or {}
                 if table.getn(cands) == 0 then return end
@@ -1210,13 +1211,13 @@ local function BuildCcMenu(parent, buttons)
         })
         cycleButton.mark = markId
 
-        local clearButton = TB.UI.CreateButton(row, "Clear", 46, 20, {
+        local clearButton = TB.UI.CreateButton(row, L["Clear"], 46, 20, {
             point = "LEFT",
             relTo = row,
             relPoint = "LEFT",
             x = 230,
             y = 0,
-            tip = "Clear " .. mark.label .. " from its current owner",
+            tip = string.format(L["Clear %s from its current owner"], mark.label),
             onClick = function()
                 local owner = TB.GetCcOwner and TB.GetCcOwner(markId) or nil
                 if owner then
@@ -1237,10 +1238,10 @@ local function BuildCcMenu(parent, buttons)
     closeBtn:SetScript("OnClick", function() TB.ToggleCcMenu() end)
     ccMenu.closeButton = closeBtn
 
-    local clearAllButton = TB.UI.CreateButton(ccMenu, "Clear all", 120, 22, {
+    local clearAllButton = TB.UI.CreateButton(ccMenu, L["Clear all"], 120, 22, {
         x = 8,
         y = -250,
-        tip = "Clear every CC mark from every bot",
+        tip = L["Clear every CC mark from every bot"],
         onClick = function()
             TB.SendActionIntent("cc clear")
         end,
@@ -1276,7 +1277,7 @@ end
 
 local function BuildEngageCard(parent, buttons)
     -- Fight: Engage (attack, stop, interrupt, flee)
-    local card = TB.UI.CreateCard(parent, "ENGAGE", W - (C.PAD or 10) * 2, 48, { y = -40, line = true })
+    local card = TB.UI.CreateCard(parent, L["ENGAGE"], W - (C.PAD or 10) * 2, 48, { y = -40, line = true })
     local btnY = -22
     buttons.attack    = makeActionButton(card, "attack", 110, 8, btnY)
     buttons.stop      = makeActionButton(card, "stop", 110, 126, btnY)
@@ -1291,7 +1292,7 @@ local function BuildPullCard(parent, buttons)
     -- Pull & Focus: pull, pullback with timers, focus skull, cc mark cover
     -- the button row; End pull sits in the timer row as the small
     -- "stop pulling" escape next to the timing controls.
-    local card = TB.UI.CreateCard(parent, "PULL & FOCUS", W - (C.PAD or 10) * 2, 68, { y = -96, line = true })
+    local card = TB.UI.CreateCard(parent, L["PULL & FOCUS"], W - (C.PAD or 10) * 2, 68, { y = -96, line = true })
     local btnY = -22
     buttons.pull      = makeActionButton(card, "pull", 110, 8, btnY)
     buttons.pullback  = makeActionButton(card, "pullback", 110, 126, btnY)
@@ -1302,8 +1303,8 @@ local function BuildPullCard(parent, buttons)
         relPoint = "BOTTOMLEFT",
         x = 1,
         y = -2,
-        tip = "Seconds the other bots wait before joining a Pull (0-60, shift-click = 5).",
-        tipTitle = "Pull timer",
+        tip = L["Seconds the other bots wait before joining a Pull (0-60, shift-click = 5)."],
+        tipTitle = L["Pull timer"],
         get = function()
             local dbNow = TortoiseBotsDB or {}
             return TB.ClampPullSeconds(dbNow.pullDelay)
@@ -1323,8 +1324,8 @@ local function BuildPullCard(parent, buttons)
         relPoint = "BOTTOMLEFT",
         x = 1,
         y = -2,
-        tip = "Seconds the other bots wait after the tank is back from a Pull back (0-60, shift-click = 5).",
-        tipTitle = "Pull timer",
+        tip = L["Seconds the other bots wait after the tank is back from a Pull back (0-60, shift-click = 5)."],
+        tipTitle = L["Pull timer"],
         get = function()
             local dbNow = TortoiseBotsDB or {}
             return TB.ClampPullSeconds(dbNow.pullbackDelay)
@@ -1351,7 +1352,7 @@ local function BuildPullCard(parent, buttons)
     buttons.ccMoon     = makeActionButton(card, "cc moon", 110, 362, btnY)
     buttons.pull:SetHeight(22); buttons.pullback:SetHeight(22)
     buttons.focusSkull:SetHeight(22); buttons.ccMoon:SetHeight(22)
-    buttons.ccMoon:SetText("CC Mark")
+    buttons.ccMoon:SetText(L["CC Mark"])
     buttons.ccMoon:SetScript("OnClick", function() TB.ToggleCcMenu() end)
     buttons.ccMark     = buttons.ccMoon
     addRaidIcon(buttons.focusSkull, 8)
@@ -1360,7 +1361,7 @@ end
 
 local function BuildMoveCard(parent, buttons)
     -- Move: five orders plus stance pills inline on one row.
-    local card = TB.UI.CreateCard(parent, "MOVE", W - (C.PAD or 10) * 2, TB.UI.Grid.CARD_MOVE_H or 76, { y = -172, line = true })
+    local card = TB.UI.CreateCard(parent, L["MOVE"], W - (C.PAD or 10) * 2, TB.UI.Grid.CARD_MOVE_H or 76, { y = -172, line = true })
     local btnY = -24
     buttons.follow   = makeActionButton(card, "follow", 89, 8, btnY)
     buttons.stay     = makeActionButton(card, "stay", 89, 101, btnY)
@@ -1372,13 +1373,13 @@ local function BuildMoveCard(parent, buttons)
     buttons.guard:SetHeight(20); buttons.free:SetHeight(20)
     TB.stancePills = {}
     local stanceIds = { "near", "tank", "turnback", "behind" }
-    local stanceLabels = { near = "Near", tank = "Tank", turnback = "Turnback", behind = "Behind" }
+    local stanceLabels = { near = L["Near"], tank = L["Tank"], turnback = L["Turnback"], behind = L["Behind"] }
     -- The melee stance pills get a caption so the row reads as a choice.
     local stanceCaption = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     stanceCaption:SetPoint("TOPLEFT", card, "TOPLEFT", 9, -51)
     stanceCaption:SetWidth(56)
     stanceCaption:SetJustifyH("LEFT")
-    stanceCaption:SetText("Melee")
+    stanceCaption:SetText(L["Melee"])
     TB.SetTextColor(stanceCaption, color("muted"))
     card.stanceCaption = stanceCaption
     for i, id in ipairs(stanceIds) do
@@ -1388,8 +1389,8 @@ local function BuildMoveCard(parent, buttons)
             x = 65 + (i - 1) * 102,
             y = -46,
             tip = ((def and def.tip) or (TB.ActionTooltip and TB.ActionTooltip("stance " .. id)) or "")
-                .. " Right-click: pin it to the mini bar.",
-            tipTitle = (label .. " stance"),
+                .. " " .. L["Right-click: pin it to the mini bar."],
+                tipTitle = string.format(L["%s stance"], label),
             onClick = function()
                 if arg1 == "RightButton" and TB.ToggleMiniFavorite then
                     TB.ToggleMiniFavorite("stance " .. id)
@@ -1409,7 +1410,7 @@ local function BuildSwitchesCard(parent, buttons)
     -- Party switches: state comes from the server (TBM:BOTSTATE) and shows
     -- as the button's look: lit gold when on, dimmed when off, gold text
     -- with "~" when the bots disagree. One row of five compact buttons.
-    local card = TB.UI.CreateCard(parent, "PARTY SWITCHES", W - (C.PAD or 10) * 2, TB.UI.Grid.CARD_SWITCH_H or 48, { y = -252, line = true })
+    local card = TB.UI.CreateCard(parent, L["PARTY SWITCHES"], W - (C.PAD or 10) * 2, TB.UI.Grid.CARD_SWITCH_H or 48, { y = -252, line = true })
     local btnY = -22
     TB.toggleButtons = {}
     local switchIdx = 1
@@ -1419,7 +1420,7 @@ local function BuildSwitchesCard(parent, buttons)
             btn:SetHeight(22)
             if btn.icon then btn.icon:Show() end
             btn.toggle = { key = def.toggle, intent = def.intent, label = def.label, tip = def.tip }
-            setButtonTooltip(btn, def.tip .. " Click to switch for the whole party (or only the targeted bot).",
+            setButtonTooltip(btn, def.tip .. " " .. L["Click to switch for the whole party (or only the targeted bot)."],
                 def.label)
             TB.toggleButtons[def.toggle] = btn
             switchIdx = switchIdx + 1
@@ -1436,7 +1437,7 @@ end
 local function BuildTacticsCard(parent, buttons)
     -- Combat tactics: one-shot strategy orders (kiting, auto-mark, focus
     -- fire, fear). The server confirms each via "Strategy change" text.
-    local card = TB.UI.CreateCard(parent, "TACTICS", W - (C.PAD or 10) * 2, TB.UI.Grid.CARD_TACTIC_H or 48, { y = -308, line = true })
+    local card = TB.UI.CreateCard(parent, L["TACTICS"], W - (C.PAD or 10) * 2, TB.UI.Grid.CARD_TACTIC_H or 48, { y = -308, line = true })
     buttons.tacticKite = makeActionButton(card, "strategy ~kite", 110, 8, -22)
     buttons.tacticMark = makeActionButton(card, "strategy ~mark rti", 110, 126, -22)
     buttons.tacticFocus = makeActionButton(card, "strategy ~focus", 110, 244, -22)
@@ -1450,7 +1451,7 @@ end
 
 local function BuildRestCard(campFrame, buttons)
     -- Camp chores: Rest, ready, repair, sell, train, release, rebuff, reset, downtime.
-    local card = TB.UI.CreateCard(campFrame, "REST, REPAIR & TRAIN", W - (C.PAD or 10) * 2, 146, { y = -18, line = true })
+    local card = TB.UI.CreateCard(campFrame, L["REST, REPAIR & TRAIN"], W - (C.PAD or 10) * 2, 146, { y = -18, line = true })
     local btnY = -24
     -- Rows by errand: recover, town chores, fixes; Downtime (own alts
     -- only) gets the last row with a line saying what it does.
@@ -1463,7 +1464,7 @@ local function BuildRestCard(campFrame, buttons)
     buttons.release = makeActionButton(card, "release", 150, 8, -84)
     buttons.release.tooltipExtra = function()
         if TB.DeathIntent and TB.DeathIntent() == "corpse run" then
-            return "Now: ghosts run back to their corpses."
+            return L["Now: ghosts run back to their corpses."]
         end
         return nil
     end
@@ -1474,7 +1475,7 @@ local function BuildRestCard(campFrame, buttons)
     downtimeNote:SetPoint("LEFT", buttons.downtime, "RIGHT", 10, 0)
     downtimeNote:SetWidth(296)
     downtimeNote:SetJustifyH("LEFT")
-    downtimeNote:SetText("Own alts: trainer, vendor and repair, then back to you.")
+    downtimeNote:SetText(L["Own alts: trainer, vendor and repair, then back to you."])
     TB.SetTextColor(downtimeNote, color("faint"))
     card.downtimeNote = downtimeNote
     return card
@@ -1482,7 +1483,7 @@ end
 
 local function BuildFormationCard(campFrame)
     -- Formation pills with a line describing the active one, two rows of five.
-    local card = TB.UI.CreateCard(campFrame, "FORMATION", W - (C.PAD or 10) * 2, 100, { y = -168, line = true })
+    local card = TB.UI.CreateCard(campFrame, L["FORMATION"], W - (C.PAD or 10) * 2, 100, { y = -168, line = true })
     local pills = {}
     local formationTips = {}
     for i, def in ipairs(C.FORMATIONS or {}) do
@@ -1493,7 +1494,7 @@ local function BuildFormationCard(campFrame)
         local btn = TB.UI.CreateTogglePill(card, def.label, 90, 20, {
             x = 8 + col * 93,
             y = -26 - row * 24,
-            tip = def.tip .. " Applies to the whole party, or only the targeted bot.",
+            tip = def.tip .. " " .. L["Applies to the whole party, or only the targeted bot."],
             tipTitle = def.label,
             onClick = function()
                 TB.SetFormation(id)
@@ -1521,21 +1522,21 @@ end
 local function BuildQuestsCard(campFrame, buttons)
     -- Party quests: accept/share loop over grouped bots, grind toggles the
     -- autonomous grind strategy for the whole party.
-    local card = TB.UI.CreateCard(campFrame, "QUESTS", W - (C.PAD or 10) * 2, 58, { y = -272, line = true })
-    buttons.acceptQuest = TB.UI.CreateButton(card, "Accept", 150, 26, {
+    local card = TB.UI.CreateCard(campFrame, L["QUESTS"], W - (C.PAD or 10) * 2, 58, { y = -272, line = true })
+    buttons.acceptQuest = TB.UI.CreateButton(card, L["Accept"], 150, 26, {
         x = 8, y = -24,
         icon = "Interface\\Icons\\INV_Misc_Book_08",
-        tip = "Accept the quest you were offered on every grouped bot.",
-        tipTitle = "Accept",
+        tip = L["Accept the quest you were offered on every grouped bot."],
+        tipTitle = L["Accept"],
         onClick = function()
             TB.SendQuestOrders("accept")
         end,
     })
-    buttons.shareQuest = TB.UI.CreateButton(card, "Share", 150, 26, {
+    buttons.shareQuest = TB.UI.CreateButton(card, L["Share"], 150, 26, {
         x = 165, y = -24,
         icon = "Interface\\Icons\\INV_Letter_15",
-        tip = "Share your tracked quests with every grouped bot.",
-        tipTitle = "Share",
+        tip = L["Share your tracked quests with every grouped bot."],
+        tipTitle = L["Share"],
         onClick = function()
             TB.SendQuestOrders("share")
         end,
@@ -1595,7 +1596,7 @@ CreateActions = function(parent)
     local campTip = campFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     campTip:SetPoint("TOPLEFT", campFrame, "TOPLEFT", 6, -342)
     campTip:SetWidth(468); campTip:SetJustifyH("LEFT")
-    campTip:SetText("Gear, bags and per-bot habits: bag icon on the Party tab, or target a bot and use Gear & bags on Fight.")
+    campTip:SetText(L["Gear, bags and per-bot habits: bag icon on the Party tab, or target a bot and use Gear & bags on Fight."])
     TB.SetTextColor(campTip, color("muted"))
     TB.campFrame = campFrame
     TB.actionButtons = buttons
@@ -1626,7 +1627,7 @@ CreateStatusBar = function(parent)
     fs:SetWidth(W - (C.PAD or 10) * 2 - 20)
     fs:SetJustifyH("LEFT")
     TB.SetTextColor(fs, color("muted"))
-    fs:SetText("Ready.")
+    fs:SetText(L["Ready."])
     TB.statusText = fs
 end
 
@@ -1698,15 +1699,15 @@ function TB.InitUI()
     -- (who does what), Roster (who is logged in), Guild (claimed bots), Raid (raid only),
     -- Dungeon (only while the server runs the dungeon run leader), Loot (only
     -- while the server keeps loot history), Log.
-    local tabActions = makeTab("Fight", 0)
-    local tabCamp = makeTab("Camp", 80)
-    local tabParty = makeTab("Party", 160)
-    local tabGuild = makeTab("Guild", 240)
-    local tabRoster = makeTab("Roster", 320)
-    local tabRaid = makeTab("Raid", 400)
-    local tabDungeon = makeTab("Dungeon", 480)
-    local tabLoot = makeTab("Loot", 560)
-    local tabLog = makeTab("Log", 640)
+    local tabActions = makeTab(TB.L["Fight"], 0)
+    local tabCamp = makeTab(TB.L["Camp"], 80)
+    local tabParty = makeTab(TB.L["Party"], 160)
+    local tabGuild = makeTab(TB.L["Guild"], 240)
+    local tabRoster = makeTab(TB.L["Roster"], 320)
+    local tabRaid = makeTab(TB.L["Raid"], 400)
+    local tabDungeon = makeTab(TB.L["Dungeon"], 480)
+    local tabLoot = makeTab(TB.L["Loot"], 560)
+    local tabLog = makeTab(TB.L["Log"], 640)
     local content = CreateFrame("Frame", nil, main)
     content:SetPoint("TOPLEFT", tabBar, "BOTTOMLEFT", 0, -4)
     content:SetWidth(W - (C.PAD or 10) * 2)
@@ -1731,12 +1732,12 @@ function TB.InitUI()
 
         local title = partyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         title:SetPoint("TOPLEFT", partyFrame, "TOPLEFT", 4, -3)
-        title:SetText("PARTY ROLES")
+        title:SetText(L["PARTY ROLES"])
         TB.SetTextColor(title, color("title"))
 
         local subtitle = partyFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         subtitle:SetPoint("LEFT", title, "RIGHT", 8, 0)
-        subtitle:SetText("Pick each bot's role · click a row to target it")
+        subtitle:SetText(L["Pick each bot's role · click a row to target it"])
         TB.SetTextColor(subtitle, color("faint"))
         partyFrame.title = title
         partyFrame.subtitle = subtitle
@@ -1745,12 +1746,12 @@ function TB.InitUI()
         emptyMsg:SetPoint("CENTER", partyFrame, "CENTER", 0, -20)
         emptyMsg:SetWidth(380)
         emptyMsg:SetJustifyH("CENTER")
-        emptyMsg:SetText("|cff888888No other party members.\nInvite your bots from the Roster tab to manage party roles.|r")
+        emptyMsg:SetText("|cff888888" .. L["No other party members.\nInvite your bots from the Roster tab to manage party roles."] .. "|r")
         partyFrame.emptyMsg = emptyMsg
 
-        local inviteBtn = TB.UI.CreateButton(partyFrame, "Invite from Roster", 140, 22, {
-            tip = "Open the Roster tab to invite your bots into the party.",
-            tipTitle = "Invite from Roster",
+        local inviteBtn = TB.UI.CreateButton(partyFrame, L["Invite from Roster"], 140, 22, {
+            tip = L["Open the Roster tab to invite your bots into the party."],
+            tipTitle = L["Invite from Roster"],
             onClick = function()
                 if TB.ShowTab then TB.ShowTab("roster") end
             end,
@@ -1826,8 +1827,8 @@ function TB.InitUI()
                 end,
                 onEnter = function()
                     GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-                    GameTooltip:SetText("Gear & bags")
-                    GameTooltip:AddLine("Open " .. (row.partyName or "this bot") .. "'s gear, bags and behaviour.",
+                    GameTooltip:SetText(L["Gear & bags"])
+                    GameTooltip:AddLine(string.format(L["Open %s's gear, bags and behaviour."], row.partyName or L["this bot"]),
                         0.9, 0.9, 0.9, 1)
                     GameTooltip:Show()
                 end,
@@ -1849,8 +1850,8 @@ function TB.InitUI()
                         TB.SendBotCommand(TB.BuildCommand("summon", row.partyName))
                     end
                 end,
-                tipTitle = "Summon",
-                tip = "Summon this bot to you. Works out of combat and takes 3 seconds.",
+                tipTitle = L["Summon"],
+                tip = L["Summon this bot to you. Works out of combat and takes 3 seconds."],
             })
             summonButton:Hide()
             row.summonButton = summonButton
@@ -1867,14 +1868,14 @@ function TB.InitUI()
             -- Kept for older callers; the mark icon speaks for itself.
             local ccLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             ccLabel:SetPoint("RIGHT", ccIcon, "LEFT", -2, 0)
-            ccLabel:SetText("CC")
+            ccLabel:SetText(L["CC"])
             TB.SetTextColor(ccLabel, color("muted"))
             ccLabel:Hide()
             row.ccLabel = ccLabel
 
             local playerLabel = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
             playerLabel:SetPoint("RIGHT", row, "RIGHT", -12, 0)
-            playerLabel:SetText("|cffd8a657You|r")
+            playerLabel:SetText("|cffd8a657" .. L["You"] .. "|r")
             row.playerLabel = playerLabel
 
             local roleButtons = {}
@@ -1908,16 +1909,16 @@ function TB.InitUI()
                 GameTooltip:SetText(row.partyName)
                 local mark = row.ccMark and C.CC_MARK_LABELS and C.CC_MARK_LABELS[row.ccMark]
                 if mark then
-                    GameTooltip:AddLine("CC mark: " .. mark, 0.9, 0.9, 0.9, 1)
+                    GameTooltip:AddLine(string.format(L["CC mark: %s"], mark), 0.9, 0.9, 0.9, 1)
                 elseif row.partyUnit ~= "player" then
-                    GameTooltip:AddLine("CC mark: not reported", COL.muted[1], COL.muted[2], COL.muted[3])
+                    GameTooltip:AddLine(L["CC mark: not reported"], COL.muted[1], COL.muted[2], COL.muted[3])
                 end
                 if row.partyState then
-                    local stateTip = row.partyState == "OOR" and "Out of range" or row.partyState
+                    local stateTip = ({ OOR = L["Out of range"], Dead = L["Dead"], Ghost = L["Ghost"], Drinking = L["Drinking"] })[row.partyState] or row.partyState
                     GameTooltip:AddLine(stateTip, COL.muted[1], COL.muted[2], COL.muted[3])
                 end
                 if row.partyUnit ~= "player" then
-                    GameTooltip:AddLine("Click row to target this bot for CC assignment.", COL.muted[1], COL.muted[2], COL.muted[3])
+                    GameTooltip:AddLine(L["Click row to target this bot for CC assignment."], COL.muted[1], COL.muted[2], COL.muted[3])
                 end
                 GameTooltip:Show()
             end)
@@ -1927,7 +1928,7 @@ function TB.InitUI()
         end
         partyFrame.rows = rows
 
-        partyFrame.summonPartyBtn = TB.UI.CreateButton(partyFrame, "Summon Party", 100, 22, {
+        partyFrame.summonPartyBtn = TB.UI.CreateButton(partyFrame, L["Summon Party"], 100, 22, {
             point = "TOPLEFT",
             x = 6,
             y = -306,
@@ -1941,13 +1942,13 @@ function TB.InitUI()
                 if table.getn(names) > 0 and TB.QueueRosterBatch then
                     TB.QueueRosterBatch("summon", names)
                 elseif TB.SetStatus then
-                    TB.SetStatus("No bots in your party to summon.", "muted")
+                    TB.SetStatus(L["No bots in your party to summon."], "muted")
                 end
             end,
-            tip = "Summon every bot in your party to you. Works out of combat.",
+            tip = L["Summon every bot in your party to you. Works out of combat."],
         })
 
-        partyFrame.summonRaidBtn = TB.UI.CreateButton(partyFrame, "Summon Raid", 100, 22, {
+        partyFrame.summonRaidBtn = TB.UI.CreateButton(partyFrame, L["Summon Raid"], 100, 22, {
             point = "TOPLEFT",
             x = 112,
             y = -306,
@@ -1961,10 +1962,10 @@ function TB.InitUI()
                 if table.getn(names) > 0 and TB.QueueRosterBatch then
                     TB.QueueRosterBatch("summon", names)
                 elseif TB.SetStatus then
-                    TB.SetStatus("No bots in your raid to summon.", "muted")
+                    TB.SetStatus(L["No bots in your raid to summon."], "muted")
                 end
             end,
-            tip = "Summon every bot in your raid to you. Works out of combat.",
+            tip = L["Summon every bot in your raid to you. Works out of combat."],
         })
         return partyFrame
     end
@@ -1980,7 +1981,7 @@ function TB.InitUI()
         local intro = raidFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         intro:SetPoint("TOPLEFT", raidFrame, "TOPLEFT", 6, 0)
         intro:SetWidth(468); intro:SetJustifyH("LEFT")
-        intro:SetText("Orders go to your bots in this raid. Target one of your bots to send an order to that bot only.")
+        intro:SetText(L["Orders go to your bots in this raid. Target one of your bots to send an order to that bot only."])
         TB.SetTextColor(intro, color("muted"))
 
         local function card(titleText, y, height)
@@ -1998,16 +1999,16 @@ function TB.InitUI()
             return fs
         end
 
-        local encounters = card("ENCOUNTER HELPERS", -18, 78)
-        raidFrame.tankface = button(encounters, "Tank face away", 180, 8, -24, "raid tankface",
-            "Target the dragon (Onyxia and other dragons): tank bots turn it away so breath and cleave miss the raid.")
-        raidFrame.douse = button(encounters, "Douse runes", 180, 196, -24, "raid douse",
-            "Molten Core: bots douse the nearby runes with Aqual or Eternal Quintessence (they must carry one).")
-        note(encounters, "Bots switch to boss tactics on their own in supported raids; these are the manual extras.", -54)
+        local encounters = card(L["ENCOUNTER HELPERS"], -18, 78)
+        raidFrame.tankface = button(encounters, L["Tank face away"], 180, 8, -24, "raid tankface",
+            L["Target the dragon (Onyxia and other dragons): tank bots turn it away so breath and cleave miss the raid."])
+        raidFrame.douse = button(encounters, L["Douse runes"], 180, 196, -24, "raid douse",
+            L["Molten Core: bots douse the nearby runes with Aqual or Eternal Quintessence (they must carry one)."])
+        note(encounters, L["Bots switch to boss tactics on their own in supported raids; these are the manual extras."], -54)
 
-        local custom = card("TURTLE CUSTOM RAIDS", -100, 78)
-        raidFrame.customToggle = button(custom, "Custom tactics: ?", 180, 8, -24, nil,
-            "Scripted boss moves for Emerald Sanctum, Lower Karazhan and Karazhan Crypt. Turn off to steer the bots yourself.")
+        local custom = card(L["TURTLE CUSTOM RAIDS"], -100, 78)
+        raidFrame.customToggle = button(custom, L["Custom tactics: ?"], 180, 8, -24, nil,
+            L["Scripted boss moves for Emerald Sanctum, Lower Karazhan and Karazhan Crypt. Turn off to steer the bots yourself."])
         raidFrame.customToggle.lamp = raidFrame.customToggle:CreateTexture(nil, "OVERLAY")
         raidFrame.customToggle.lamp:SetWidth(8); raidFrame.customToggle.lamp:SetHeight(8)
         raidFrame.customToggle.lamp:SetPoint("RIGHT", raidFrame.customToggle, "RIGHT", -9, 0)
@@ -2015,13 +2016,13 @@ function TB.InitUI()
             local state = TB.GetRaidCustomState and TB.GetRaidCustomState()
             TB.SendActionIntent(state == "on" and "raid custom off" or "raid custom on")
         end)
-        raidFrame.customCheck = button(custom, "Check", 90, 196, -24, "raid custom status",
-            "Ask every bot whether custom raid tactics are on.")
-        note(custom, "The server can switch these off entirely (AiPlayerbot.EnableCustomRaidTactics).", -54)
+        raidFrame.customCheck = button(custom, L["Check"], 90, 196, -24, "raid custom status",
+            L["Ask every bot whether custom raid tactics are on."])
+        note(custom, L["The server can switch these off entirely (AiPlayerbot.EnableCustomRaidTactics)."], -54)
 
-        local status = card("BOT RAID TACTICS", -182, 146)
-        raidFrame.statusButton = button(status, "Check bots", 120, 8, -24, nil,
-            "List the boss tactics each bot has loaded for this raid.")
+        local status = card(L["BOT RAID TACTICS"], -182, 146)
+        raidFrame.statusButton = button(status, L["Check bots"], 120, 8, -24, nil,
+            L["List the boss tactics each bot has loaded for this raid."])
         raidFrame.statusButton:SetScript("OnClick", function()
             if TB.ClearRaidStatus then TB.ClearRaidStatus() end
             TB.SendActionIntent("raid status")
@@ -2077,12 +2078,12 @@ end
             if TB.RefreshGuildView then TB.RefreshGuildView() end
         end)
         guildFrame.searchBox = search
-        TB.StyleEditBox(search, "Search guild bots")
+        TB.StyleEditBox(search, L["Search guild bots"])
 
         local clear = TB.StyleButton(CreateFrame("Button", nil, guildFrame, "UIPanelButtonTemplate"), "mode")
         clear:SetWidth(42); clear:SetHeight(20)
         clear:SetPoint("LEFT", search, "RIGHT", 4, 0)
-        clear:SetText("Clear")
+        clear:SetText(L["Clear"])
         clear:SetScript("OnClick", function()
             search:SetText("")
             search:ClearFocus()
@@ -2102,7 +2103,7 @@ end
         checkAll:SetWidth(20); checkAll:SetHeight(20)
         checkAll:SetPoint("TOPLEFT", guildFrame, "TOPLEFT", 4, -44)
         TB.StyleCheckButton(checkAll)
-        setButtonTooltip(checkAll, "Select or deselect all claimed bots")
+        setButtonTooltip(checkAll, L["Select or deselect all claimed bots"])
         checkAll:SetScript("OnClick", function()
             local isChecked = this:GetChecked() and true or false
             TB.SelectAllClaimed(isChecked)
@@ -2110,12 +2111,12 @@ end
         guildFrame.checkAll = checkAll
 
         local headers = {
-            { text = "Name", width = 76, x = 46, sortKey = "name" },
-            { text = "Level", width = 60, x = 124, sortKey = "level" },
-            { text = "Gear", width = 50, x = 186, sortKey = nil },
-            { text = "Status", width = 64, x = 238, sortKey = "status" },
-            { text = "Role", width = 74, x = 304, sortKey = nil, center = true },
-            { text = "Order", width = 42, x = 380, sortKey = nil, center = true },
+            { text = L["Name"], width = 76, x = 46, sortKey = "name" },
+            { text = L["Level"], width = 60, x = 124, sortKey = "level" },
+            { text = L["Gear"], width = 50, x = 186, sortKey = nil },
+            { text = L["Status"], width = 64, x = 238, sortKey = "status" },
+            { text = L["Role"], width = 74, x = 304, sortKey = nil, center = true },
+            { text = L["Order"], width = 42, x = 380, sortKey = nil, center = true },
         }
         guildFrame.headerBtns = {}
         for _, h in ipairs(headers) do
@@ -2132,7 +2133,7 @@ end
             btn.headerLabel = fs
             if h.sortKey then
                 btn.sortKey = h.sortKey
-                setButtonTooltip(btn, "Sort by " .. string.lower(h.text))
+                setButtonTooltip(btn, string.format(L["Sort by %s"], string.lower(h.text)))
                 btn:SetScript("OnClick", function()
                     if TB.SetGuildSort then TB.SetGuildSort(this.sortKey) end
                 end)
@@ -2156,8 +2157,8 @@ end
         local rankBtn = TB.StyleButton(CreateFrame("Button", nil, guildFrame, "UIPanelButtonTemplate"), "mode")
         rankBtn:SetWidth(56); rankBtn:SetHeight(18)
         rankBtn:SetPoint("TOPLEFT", guildFrame, "TOPLEFT", W - (C.PAD or 10) * 2 - 56, -25)
-        rankBtn:SetText("Rank")
-        setButtonTooltip(rankBtn, "Change the guild rank bots get", "Bots' rank")
+        rankBtn:SetText(L["Rank"])
+        setButtonTooltip(rankBtn, L["Change the guild rank bots get"], L["Bots' rank"])
         rankBtn:SetScript("OnClick", function()
             if TB.OpenOrderRankMenu then TB.OpenOrderRankMenu(this) end
         end)
@@ -2198,7 +2199,7 @@ end
             TB._guildTipOwner = row
             GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
             GameTooltip:SetText(entry.name)
-            GameTooltip:AddLine("Level " .. entry.level .. " " .. (entry.className or "") .. " · " .. (entry.status or "Unknown"), 1, 1, 1)
+            GameTooltip:AddLine(string.format(L["Level %s %s"], tostring(entry.level), entry.className or "") .. " · " .. L[entry.status or "Unknown"], 1, 1, 1)
             local zone = guildRosterZone(entry.name)
             if zone then GameTooltip:AddLine("Location: " .. zone, 1, 1, 1) end
             -- Row professions from the CLAIMED snapshot ride the row itself;
@@ -2218,7 +2219,7 @@ end
                 GameTooltip:AddLine("Order: " .. TB.OrderRowText(order), 1, 1, 1)
             end
             if TB.BuildGuildRowMenu and TB.BuildGuildRowMenu(entry.name, function() end) > 0 then
-                GameTooltip:AddLine("Right-click for more actions.", COL.muted[1], COL.muted[2], COL.muted[3])
+                GameTooltip:AddLine(L["Right-click for more actions."], COL.muted[1], COL.muted[2], COL.muted[3])
             end
             GameTooltip:Show()
         end
@@ -2305,8 +2306,8 @@ end
                 onEnter = function()
                     local entry = this:GetParent().entry
                     GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-                    GameTooltip:SetText("Gear & Bags")
-                    GameTooltip:AddLine("Open " .. (entry and entry.name or "this bot") .. "'s gear, bags and paperdoll.", 0.9, 0.9, 0.9, 1)
+                    GameTooltip:SetText(L["Gear & Bags"])
+                    GameTooltip:AddLine(string.format(L["Open %s's gear, bags and paperdoll."], entry and entry.name or L["this bot"]), 0.9, 0.9, 0.9, 1)
                     GameTooltip:Show()
                 end,
                 onLeave = function() GameTooltip:Hide() end,
@@ -2317,7 +2318,7 @@ end
             roleBtn.flatKind = "mode"
             roleBtn:SetWidth(74); roleBtn:SetHeight(16)
             roleBtn:SetPoint("LEFT", row, "LEFT", 304, 8)
-            roleBtn:SetText("Role")
+            roleBtn:SetText(L["Role"])
             roleBtn:SetScript("OnClick", function()
                 local entry = this:GetParent().entry
                 if not entry then return end
@@ -2331,8 +2332,8 @@ end
                 local currentId = dbRoles[entry.name]
                 local curLabel = TB.Roles.GetRoleLabel(entry.classId, currentId, "Default")
                 GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-                GameTooltip:SetText("Combat Role: " .. curLabel)
-                GameTooltip:AddLine("Click to cycle to the next combat role.", 0.9, 0.9, 0.9, 1)
+                GameTooltip:SetText(string.format(L["Combat Role: %s"], TB.Roles.DisplayLabel(curLabel)))
+                GameTooltip:AddLine(L["Click to cycle to the next combat role."], 0.9, 0.9, 0.9, 1)
                 GameTooltip:Show()
             end)
             roleBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -2341,12 +2342,12 @@ end
             local ordBtn = TB.StyleButton(CreateFrame("Button", nil, row, "UIPanelButtonTemplate"))
             ordBtn:SetWidth(42); ordBtn:SetHeight(16)
             ordBtn:SetPoint("LEFT", row, "LEFT", 380, 8)
-            ordBtn:SetText("Order")
+            ordBtn:SetText(L["Order"])
             ordBtn:SetScript("OnClick", function()
                 local entry = this:GetParent().entry
                 if entry and TB.OpenOrderWindow then TB.OpenOrderWindow(entry.name) end
             end)
-            setButtonTooltip(ordBtn, "Open the order window for this bot.", "Order")
+            setButtonTooltip(ordBtn, L["Open the order window for this bot."], L["Order"])
             row.ordBtn = ordBtn
 
             -- The "..." button opens the row's right-click menu for mouse
@@ -2359,7 +2360,7 @@ end
                 local entry = this:GetParent().entry
                 if entry and TB.OpenGuildRowMenu then TB.OpenGuildRowMenu(entry.name) end
             end)
-            setButtonTooltip(moreBtn, "Cancel or move this bot's order, or release it. Right-click the row works too.", "More")
+            setButtonTooltip(moreBtn, L["Cancel or move this bot's order, or release it. Right-click the row works too."], L["More"])
             row.moreBtn = moreBtn
 
             -- Enchant Meet: the giver's own order row shows it until the
@@ -2369,12 +2370,12 @@ end
             meetBtn.flatKind = "primary"
             meetBtn:SetWidth(76); meetBtn:SetHeight(16)
             meetBtn:SetPoint("LEFT", row, "LEFT", 380, -8)
-            meetBtn:SetText("Meet")
+            meetBtn:SetText(L["Meet"])
             meetBtn:SetScript("OnClick", function()
                 local entry = this:GetParent().entry
                 if entry and TB.SendOrderMeet then TB.SendOrderMeet(entry.name) end
             end)
-            setButtonTooltip(meetBtn, "Ask the bot to walk to you for the enchant trade.", "Meet")
+            setButtonTooltip(meetBtn, L["Ask the bot to walk to you for the enchant trade."], L["Meet"])
             meetBtn.tooltipExtra = function()
                 local why = this and this.meetWhy or nil
                 if why then return why end
@@ -2417,7 +2418,7 @@ end
         emptyMsg:SetPoint("CENTER", guildFrame, "CENTER", 0, -10)
         emptyMsg:SetWidth(420)
         emptyMsg:SetJustifyH("CENTER")
-        emptyMsg:SetText("|cffd8a657No Claimed Guild Bots|r\n\n|cffffffffYou can claim autonomous wandering bots in the world as your personal raid roster alt-bots!|r\n\n|cff888888Invite any unguilded bot to your guild using:|r\n|cff4ecb5a/ginvite <BotName>|r\n\n|cff888888Claimed bots preserve the gear you give them, never auto-vendor at 60, and can be inspected, geared, and summoned here.|r")
+        emptyMsg:SetText("|cffd8a657" .. L["No Claimed Guild Bots"] .. "|r\n\n|cffffffff" .. L["You can claim autonomous wandering bots in the world as your personal raid roster alt-bots!"] .. "|r\n\n|cff888888" .. L["Invite any unguilded bot to your guild using:"] .. "|r\n|cff4ecb5a/ginvite <" .. L["BotName"] .. ">|r\n\n|cff888888" .. L["Claimed bots preserve the gear you give them, never auto-vendor at 60, and can be inspected, geared, and summoned here."] .. "|r")
         guildFrame.emptyMsg = emptyMsg
 
         -- Bottom Guild Action Bar
@@ -2436,8 +2437,8 @@ end
         local inviteBtn = TB.StyleButton(CreateFrame("Button", nil, bar, "UIPanelButtonTemplate"))
         inviteBtn:SetWidth(62); inviteBtn:SetHeight(24)
         inviteBtn:SetPoint("LEFT", bar, "LEFT", 66, 0)
-        inviteBtn:SetText("Invite")
-        setButtonTooltip(inviteBtn, "Invite selected online claimed bots to your party. A full party becomes a raid.")
+        inviteBtn:SetText(L["Invite"])
+        setButtonTooltip(inviteBtn, L["Invite selected online claimed bots to your party. A full party becomes a raid."])
         inviteBtn:SetScript("OnClick", function()
             local names = TB.GetEligibleClaimedNames and TB.GetEligibleClaimedNames("invite") or {}
             if table.getn(names) > 0 then
@@ -2447,7 +2448,7 @@ end
                     for _, n in ipairs(names) do TB.SendBotCommand("invite " .. n) end
                 end
             elseif TB.SetStatus then
-                TB.SetStatus("No eligible selected bots to invite.", "muted")
+                TB.SetStatus(L["No eligible selected bots to invite."], "muted")
             end
         end)
         guildFrame.inviteBtn = inviteBtn
@@ -2455,14 +2456,14 @@ end
         local summonBtn = TB.StyleButton(CreateFrame("Button", nil, bar, "UIPanelButtonTemplate"))
         summonBtn:SetWidth(66); summonBtn:SetHeight(24)
         summonBtn:SetPoint("LEFT", inviteBtn, "RIGHT", 5, 0)
-        summonBtn:SetText("Summon")
-        setButtonTooltip(summonBtn, "Summon selected online claimed bots to your position")
+        summonBtn:SetText(L["Summon"])
+        setButtonTooltip(summonBtn, L["Summon selected online claimed bots to your position"])
         summonBtn:SetScript("OnClick", function()
             local names = TB.GetEligibleClaimedNames and TB.GetEligibleClaimedNames("summon") or {}
             if table.getn(names) > 0 then
                 for _, n in ipairs(names) do TB.SendBotCommand("summon " .. n) end
             elseif TB.SetStatus then
-                TB.SetStatus("No eligible selected bots to summon.", "muted")
+                TB.SetStatus(L["No eligible selected bots to summon."], "muted")
             end
         end)
         guildFrame.summonBtn = summonBtn
@@ -2470,8 +2471,8 @@ end
         local syncBtn = TB.StyleButton(CreateFrame("Button", nil, bar, "UIPanelButtonTemplate"))
         syncBtn:SetWidth(52); syncBtn:SetHeight(24)
         syncBtn:SetPoint("LEFT", summonBtn, "RIGHT", 5, 0)
-        syncBtn:SetText("Sync")
-        setButtonTooltip(syncBtn, "Sync claimed guild bots and roster from server")
+        syncBtn:SetText(L["Sync"])
+        setButtonTooltip(syncBtn, L["Sync claimed guild bots and roster from server"])
         syncBtn:SetScript("OnClick", function()
             if TB.PollList then TB.PollList(true) end
         end)
@@ -2480,8 +2481,8 @@ end
         local fillBtn = TB.StyleButton(CreateFrame("Button", nil, bar, "UIPanelButtonTemplate"))
         fillBtn:SetWidth(66); fillBtn:SetHeight(24)
         fillBtn:SetPoint("LEFT", syncBtn, "RIGHT", 5, 0)
-        fillBtn:SetText("Fill raid")
-        setButtonTooltip(fillBtn, "Invite online claimed bots until the raid is full (40). Needs no selection.")
+        fillBtn:SetText(L["Fill raid"])
+        setButtonTooltip(fillBtn, L["Invite online claimed bots until the raid is full (40). Needs no selection."])
         fillBtn:SetScript("OnClick", function()
             local names = TB.GetFillRaidNames and TB.GetFillRaidNames() or {}
             if table.getn(names) > 0 then
@@ -2491,7 +2492,7 @@ end
                     for _, n in ipairs(names) do TB.SendBotCommand("invite " .. n) end
                 end
             elseif TB.SetStatus then
-                TB.SetStatus("No bots to fill the raid.", "muted")
+                TB.SetStatus(L["No bots to fill the raid."], "muted")
             end
         end)
         guildFrame.fillBtn = fillBtn
@@ -2499,13 +2500,13 @@ end
         local activeBtn = TB.StyleButton(CreateFrame("Button", nil, bar, "UIPanelButtonTemplate"))
         activeBtn:SetWidth(56); activeBtn:SetHeight(24)
         activeBtn:SetPoint("LEFT", fillBtn, "RIGHT", 5, 0)
-        activeBtn:SetText("Orders")
-        setButtonTooltip(activeBtn, "See every order the guild bots are working on, and what each one is doing now.", "Active orders")
+        activeBtn:SetText(L["Orders"])
+        setButtonTooltip(activeBtn, L["See every order the guild bots are working on, and what each one is doing now."], L["Active orders"])
         activeBtn:SetScript("OnClick", function()
             if TB.ToggleActiveOrders then
                 TB.ToggleActiveOrders()
             elseif TB.Print then
-                TB.Print("The Orders window is new: quit the game fully and start it again (/reload does not load new files).")
+                TB.Print(L["The Orders window is new: quit the game fully and start it again (/reload does not load new files)."])
             end
         end)
         guildFrame.activeBtn = activeBtn
@@ -2514,8 +2515,8 @@ end
         orderBtn.flatKind = "primary"
         orderBtn:SetWidth(86); orderBtn:SetHeight(24)
         orderBtn:SetPoint("LEFT", activeBtn, "RIGHT", 5, 0)
-        orderBtn:SetText("Guild order")
-        setButtonTooltip(orderBtn, "Pick a recipe, see which guild bots know it, then order.", "Guild order")
+        orderBtn:SetText(L["Guild order"])
+        setButtonTooltip(orderBtn, L["Pick a recipe, see which guild bots know it, then order."], L["Guild order"])
         orderBtn:SetScript("OnClick", function()
             if TB.OpenGuildOrderWindow then TB.OpenGuildOrderWindow() end
         end)
@@ -2532,13 +2533,13 @@ end
         logFrame:SetWidth(W - (C.PAD or 10) * 2)
         logFrame:SetHeight(325)
 
-        TB.UI.CreateHeading(logFrame, "Bot activity", "Bot messages and server replies, newest first")
+        TB.UI.CreateHeading(logFrame, L["Bot activity"], L["Bot messages and server replies, newest first"])
 
         local clearBtn = TB.StyleButton(CreateFrame("Button", nil, logFrame, "UIPanelButtonTemplate"), "mode")
         clearBtn:SetWidth(56); clearBtn:SetHeight(18)
         clearBtn:SetPoint("TOPRIGHT", logFrame, "TOPRIGHT", 0, 2)
-        clearBtn:SetText("Clear")
-        setButtonTooltip(clearBtn, "Clear recorded activity history")
+        clearBtn:SetText(L["Clear"])
+        setButtonTooltip(clearBtn, L["Clear recorded activity history"])
         clearBtn:SetScript("OnClick", function()
             if TB.ClearLogHistory then TB.ClearLogHistory() end
             if TB.RefreshLogView then TB.RefreshLogView() end
@@ -2566,16 +2567,24 @@ end
 
             local timeText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             timeText:SetPoint("TOPLEFT", row, "TOPLEFT", 6, -3)
-            timeText:SetWidth(40)
+            -- Fixed widths fit the English font; wider fonts (zhTW/zhCN
+            -- digits and the translated tag) would wrap, so grow to the text.
+            local function fitWidth(fs, minimum)
+                local w = fs.GetStringWidth and fs:GetStringWidth()
+                fs:SetWidth((w and w + 4 > minimum) and math.ceil(w + 4) or minimum)
+            end
+            timeText:SetText("00:00:00")
+            fitWidth(timeText, 40)
+            timeText:SetText("")
             timeText:SetJustifyH("LEFT")
             TB.SetTextColor(timeText, color("faint"))
             row.timeText = timeText
 
             local tagText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             tagText:SetPoint("LEFT", timeText, "RIGHT", 2, 0)
-            tagText:SetWidth(30)
             tagText:SetJustifyH("LEFT")
-            tagText:SetText("|cffb08a48Bot|r")
+            tagText:SetText("|cffb08a48" .. L["Bot"] .. "|r")
+            fitWidth(tagText, 30)
             row.tagText = tagText
 
             local msgText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -2635,7 +2644,7 @@ end
                 row.partyUnit = unit
                 row.partyName = name
                 local level = (UnitLevel and UnitLevel(unit)) or 0
-                local lvlText = (level and level > 0 and ("Lvl " .. level)) or "Lvl ??"
+                local lvlText = string.format(L["Lvl %s"], (level and level > 0) and tostring(level) or "??")
                 local className, classFileName = (UnitClass and UnitClass(unit)) or "Unknown", "UNKNOWN"
                 local classId = (classFileName and TB.C.CLASS_NAME_TO_ID and TB.C.CLASS_NAME_TO_ID[classFileName])
                     or (className and TB.C.CLASS_NAME_TO_ID and TB.C.CLASS_NAME_TO_ID[className])
@@ -2779,10 +2788,12 @@ end
                         end)
 
                         if isPlayer then
-                            setButtonTooltip(btn, "Tell your bots you play as " .. capturedRole.label ..
-                                " (bots use " .. playerRoleToken .. "). Your own spec does not change.")
+                            setButtonTooltip(btn, string.format(
+                                L["Tell your bots you play as %s (bots use %s). Your own spec does not change."],
+                                TB.Roles.DisplayLabel(capturedRole.label), playerRoleToken))
                         else
-                            setButtonTooltip(btn, "Set " .. capturedName .. " role to " .. capturedRole.label ..
+                            setButtonTooltip(btn, string.format(L["Set %s role to %s"], capturedName,
+                                TB.Roles.DisplayLabel(capturedRole.label)) ..
                                 (capturedRole.strat ~= "" and (" (" .. capturedRole.strat .. ")") or ""))
                         end
                         btn:Show()
@@ -2826,8 +2837,8 @@ end
         end
 
         if frame.countLabel then
-            frame.countLabel:SetText("Claimed: " .. total .. "  (|cff4ecb5a" .. onlineCount
-                .. " online|r, |cffffd200" .. lockedCount .. " locked|r)")
+            frame.countLabel:SetText(L["Claimed:"] .. " " .. total .. "  (|cff4ecb5a" .. onlineCount
+                .. " " .. L["online"] .. "|r, |cffffd200" .. lockedCount .. " " .. L["locked"] .. "|r)")
         end
 
         if frame.accessLine then
@@ -2839,7 +2850,7 @@ end
                 else frame.accessLine:SetTextColor(0.62, 0.60, 0.56) end
                 frame.accessLine:Show()
             elseif orderCap then
-                frame.accessLine:SetText("Bank access: waiting for the server...")
+                frame.accessLine:SetText(L["Bank access: waiting for the server..."])
                 frame.accessLine:SetTextColor(0.62, 0.60, 0.56)
                 frame.accessLine:Show()
             else
@@ -2902,15 +2913,15 @@ end
 
                 row.lvlClass:SetText(entry.level .. " " .. (entry.className or ""))
                 if entry.gearLocked then
-                    row.gearBadge:SetText("|cffffd200Locked|r")
+                    row.gearBadge:SetText("|cffffd200" .. L["Locked"] .. "|r")
                 else
-                    row.gearBadge:SetText("|cff4ecb5aLeveling|r")
+                    row.gearBadge:SetText("|cff4ecb5a" .. L["Leveling"] .. "|r")
                 end
 
                 local statusColor = entry.online and "|cff4ecb5a" or "|cff757575"
                 local statusStr = entry.status or (entry.online and "Online" or "Offline")
-                statusStr = string.upper(string.sub(statusStr, 1, 1)) .. string.sub(statusStr, 2)
-                if entry.group then statusColor, statusStr = "|cff42a5f5", "In party" end
+                statusStr = L[string.upper(string.sub(statusStr, 1, 1)) .. string.sub(statusStr, 2)]
+                if entry.group then statusColor, statusStr = "|cff42a5f5", L["In party"] end
                 row.status:SetText(statusColor .. (entry.online and "● " or "○ ") .. statusStr .. "|r")
 
                 -- Guild order line: hidden with no capability, greyed with no
@@ -2934,7 +2945,7 @@ end
                 if row.orderLine then
                     if hasOrderLine then
                         local working = string.lower(order.state or "") == "working"
-                        row.orderLine:SetText(working and ("Working on guild order - " .. TB.OrderItemLink(order) .. " " .. TB.OrderProgress(order)) or TB.OrderRowText(order, true))
+                        row.orderLine:SetText(working and (L["Working on guild order - "] .. TB.OrderItemLink(order) .. " " .. TB.OrderProgress(order)) or TB.OrderRowText(order, true))
                         row.orderLine:Show()
                     else
                         row.orderLine:Hide()
@@ -2992,7 +3003,7 @@ end
 
         local selCount = TB.GetClaimedSelectionCount and TB.GetClaimedSelectionCount() or 0
         if frame.selectionLabel then
-            frame.selectionLabel:SetText(selCount .. " selected")
+            frame.selectionLabel:SetText(string.format(L["%d selected"], selCount))
         end
         if frame.inviteBtn then
             if selCount > 0 then frame.inviteBtn:Enable() else frame.inviteBtn:Disable() end
@@ -3185,7 +3196,7 @@ end
 function TB.SetStatus(msg, kind)
     if not TB.statusText then return end
     msg = msg or ""
-    if string.len(msg) > 120 then msg = string.sub(msg, 1, 120) .. "…" end
+    if string.len(msg) > 120 then msg = TB.Utf8Cut(msg, 120) .. "…" end
     local c = color("muted")
     local dot = "|cff757575○|r"
     if kind == "ok" then
@@ -3222,7 +3233,7 @@ RefreshCounts = function()
         end
     end
     if TB.countLabel then
-        TB.countLabel:SetText(string.format("%d owned · %d online", total, online))
+        TB.countLabel:SetText(string.format(L["%d owned · %d online"], total, online))
     end
 end
 
@@ -3299,7 +3310,7 @@ RefreshRosterSelection = function()
     end
     if TB.selectionLabel then
         local names = TB.GetSelectedRosterNames and TB.GetSelectedRosterNames() or {}
-        TB.selectionLabel:SetText(table.getn(names) .. " selected")
+        TB.selectionLabel:SetText(string.format(L["%d selected"], table.getn(names)))
         TB.SetTextColor(TB.selectionLabel, table.getn(names) > 0 and color("text") or color("muted"))
     end
     if TB.lifecycleButtons then
@@ -3365,12 +3376,12 @@ function TB.RefreshActionControls()
         TB.SetTextColor(TB.scopeHint, color("text"))
     end
     if TB.scopeNote then
-        TB.scopeNote:SetText(scope == "party" and "Target one of your bots to command it alone."
-            or "Only this bot gets the orders below.")
+        TB.scopeNote:SetText(scope == "party" and L["Target one of your bots to command it alone."]
+            or L["Only this bot gets the orders below."])
     end
     if TB.campScopeHint then
-        TB.campScopeHint:SetText(botName and ("Orders go to " .. botName .. " only (your target).")
-            or "Orders go to your whole party. Target one of your bots to send them to that bot only.")
+        TB.campScopeHint:SetText(botName and string.format(L["Orders go to %s only (your target)."], botName)
+            or L["Orders go to your whole party. Target one of your bots to send them to that bot only."])
     end
     if TB.RefreshMiniBar then TB.RefreshMiniBar() end
     if TB.scopeGearButton then
@@ -3443,7 +3454,7 @@ function TB.RefreshCampControls()
     if not TB.actionButtons then return end
     if TB.actionButtons.grind then
         local state = TB.GetGrindState and TB.GetGrindState() or nil
-        paintSwitch(TB.actionButtons.grind, "Grind", state == "on" and "on" or "off")
+        paintSwitch(TB.actionButtons.grind, L["Grind"], state == "on" and "on" or "off")
         if TB.actionButtons.grind.actionIntent and TB.SetButtonFeedback and TB.ActionFeedbackState then
             TB.SetButtonFeedback(TB.actionButtons.grind, TB.ActionFeedbackState(TB.actionButtons.grind.actionIntent))
         end
@@ -3471,7 +3482,7 @@ function TB.RefreshDeathButton()
     local btn = TB.actionButtons and TB.actionButtons.release
     if not btn then return end
     local intent = TB.DeathIntent()
-    btn:SetText(intent == "corpse run" and "Corpse run" or "Release")
+    btn:SetText(intent == "corpse run" and L["Corpse run"] or L["Release"])
     if intent then btn:Enable() else btn:Disable() end
 end
 
@@ -3503,13 +3514,13 @@ function TB.OnRaidAck(packet)
         raidStatus[TB.NormalizeName(botName)] = packet.executor
         local n = 0
         for _ in pairs(raidStatus) do n = n + 1 end
-        if TB.SetStatus then TB.SetStatus("Raid tactics reported by " .. n .. " bot(s).", "ok") end
+        if TB.SetStatus then TB.SetStatus(string.format(L["Raid tactics reported by %s bot(s)."], tostring(n)), "ok") end
         if TB.RefreshRaidView then TB.RefreshRaidView() end
         return true
     end
     if intent == "raid custom status" and botName then
         raidCustom[TB.NormalizeName(botName)] = packet.executor == "off" and "off" or "on"
-        if TB.SetStatus then TB.SetStatus("Custom tactics: " .. (TB.GetRaidCustomState() or "?"), "ok") end
+        if TB.SetStatus then TB.SetStatus(string.format(L["Custom tactics: %s"], L[TB.GetRaidCustomState() or "?"]), "ok") end
         if TB.RefreshRaidView then TB.RefreshRaidView() end
         return true
     end
@@ -3526,7 +3537,7 @@ function TB.RefreshRaidView()
     if not frame then return end
     local state = TB.GetRaidCustomState()
     local word = state == "on" and "On" or (state == "off" and "Off" or (state == "mixed" and "Mixed" or "?"))
-    frame.customToggle:SetText("Custom tactics: " .. word)
+    frame.customToggle:SetText(string.format(L["Custom tactics: %s"], L[word]))
     if state == "on" then frame.customToggle.lamp:SetTexture(0.30, 0.90, 0.45, 1)
     elseif state == "off" then frame.customToggle.lamp:SetTexture(0.45, 0.45, 0.45, 1)
     else frame.customToggle.lamp:SetTexture(0.95, 0.72, 0.28, 1) end
@@ -3537,15 +3548,15 @@ function TB.RefreshRaidView()
     local lines = {}
     for i, name in ipairs(names) do
         if i > 6 then
-            table.insert(lines, "|cff9d9d9d… and " .. (table.getn(names) - 6) .. " more|r")
+            table.insert(lines, "|cff9d9d9d" .. string.format(L["… and %s more"], table.getn(names) - 6) .. "|r")
             break
         end
         local tactics = raidStatus[name]
-        if tactics == "outdoor" then tactics = "|cff9d9d9dno boss tactics loaded|r" end
+        if tactics == "outdoor" then tactics = "|cff9d9d9d" .. L["no boss tactics loaded"] .. "|r" end
         table.insert(lines, "|cffd8a657" .. name .. "|r  " .. tactics)
     end
     if table.getn(lines) == 0 then
-        lines = { "|cff9d9d9dClick Check bots to see which boss tactics each bot has loaded.|r" }
+        lines = { "|cff9d9d9d" .. L["Click Check bots to see which boss tactics each bot has loaded."] .. "|r" }
     end
     frame.statusList:SetText(table.concat(lines, "\n"))
 end

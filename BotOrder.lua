@@ -119,6 +119,7 @@
 -- out instead of waiting for a "forbidden" reply.
 
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C or {}
 local COL = C.COLOR or {}
 
@@ -162,11 +163,11 @@ function TB.CanGiveOrders()
 end
 
 -- ── labels ────────────────────────────────────────────────────────────────
-local TYPE_LABEL = { farm = "Farm", buy = "Buy", craft = "Craft", enchant = "Enchant" }
+local TYPE_LABEL = { farm = L["Farm"], buy = L["Buy"], craft = L["Craft"], enchant = L["Enchant"] }
 local STATE_LABEL = {
-    working = "Working", waiting = "Waiting", delivering = "Delivering",
-    done = "Done", stocked = "Stocked", mailed = "Mailed", noskill = "No skill", cant = "Can't",
-    ready = "Ready", coming = "Coming", enchanting = "Enchanting",
+    working = L["Working"], waiting = L["Waiting"], delivering = L["Delivering"],
+    done = L["Done"], stocked = L["Stocked"], mailed = L["Mailed"], noskill = L["No skill"], cant = L["Can't"],
+    ready = L["Ready"], coming = L["Coming"], enchanting = L["Enchanting"],
 }
 local STATE_COLOR = {
     working = "|cff4ecb5a", waiting = "|cffffd200", delivering = "|cffffd200",
@@ -174,23 +175,23 @@ local STATE_COLOR = {
     ready = "|cff4ecb5a", coming = "|cffffd200", enchanting = "|cffffd200",
 }
 local REASON_LABEL = {
-    grouped = "in a group", noskill = "missing profession", lowskill = "skill too low",
-    lowlevel = "bot under level 10", norange = "nothing in level range",
-    nosource = "no source", norecipe = "unknown recipe", elite = "only from elite creatures",
-    timeout = "farm time ran out", noprogress = "no progress - the bot found nothing to farm",
-    stuck = "stuck, gave up", bagsfull = "bags full", nobank = "no bank deposit",
-    needitems = "needs items from you",
-    nobanker = "no banker in reach", bankdenied = "bank refused withdrawal",
-    noauctioneer = "no auctioneer in reach", nolisting = "nothing fitting on the AH",
-    enchant = "enchants cannot be ordered yet", bound = "soulbound when made",
-    needsprofession = "needs a profession to use", cooldown = "long recipe cooldown",
+    grouped = L["in a group"], noskill = L["missing profession"], lowskill = L["skill too low"],
+    lowlevel = L["bot under level 10"], norange = L["nothing in level range"],
+    nosource = L["no source"], norecipe = L["unknown recipe"], elite = L["only from elite creatures"],
+    timeout = L["farm time ran out"], noprogress = L["no progress - the bot found nothing to farm"],
+    stuck = L["stuck, gave up"], bagsfull = L["bags full"], nobank = L["no bank deposit"],
+    needitems = L["needs items from you"],
+    nobanker = L["no banker in reach"], bankdenied = L["bank refused withdrawal"],
+    noauctioneer = L["no auctioneer in reach"], nolisting = L["nothing fitting on the AH"],
+    enchant = L["enchants cannot be ordered yet"], bound = L["soulbound when made"],
+    needsprofession = L["needs a profession to use"], cooldown = L["long recipe cooldown"],
 }
-local SOURCE_LABEL = { drop = "drop", skin = "skin", herb = "herb", ore = "ore", fish = "fish", craft = "craft", ah = "AH" }
+local SOURCE_LABEL = { drop = L["drop"], skin = L["skin"], herb = L["herb"], ore = L["ore"], fish = L["fish"], craft = L["craft"], ah = L["AH"] }
 local SKILL_NAMES = {
-    ["129"] = "First Aid", ["164"] = "Blacksmithing", ["165"] = "Leatherworking",
-    ["171"] = "Alchemy", ["182"] = "Herbalism", ["185"] = "Cooking",
-    ["186"] = "Mining", ["197"] = "Tailoring", ["202"] = "Engineering",
-    ["333"] = "Enchanting", ["356"] = "Fishing", ["393"] = "Skinning",
+    ["129"] = L["First Aid"], ["164"] = L["Blacksmithing"], ["165"] = L["Leatherworking"],
+    ["171"] = L["Alchemy"], ["182"] = L["Herbalism"], ["185"] = L["Cooking"],
+    ["186"] = L["Mining"], ["197"] = L["Tailoring"], ["202"] = L["Engineering"],
+    ["333"] = (TB.HasTranslation("Enchanting (profession)") and L["Enchanting (profession)"] or "Enchanting"), ["356"] = L["Fishing"], ["393"] = L["Skinning"],
 }
 
 function TB.OrderTypeLabel(kind)
@@ -205,6 +206,13 @@ end
 -- The capital an enchant order meets in, by the player's faction: Stormwind
 -- for the Alliance, Orgrimmar for the Horde. UnitFactionGroup is missing in
 -- the harness and on some clients, so anything but Horde reads Alliance.
+-- The capital's shown name (OrderCapital stays English for the server).
+local function capitalName(capital)
+    if capital == "Orgrimmar" then return L["Orgrimmar"] end
+    if capital == "Stormwind" then return L["Stormwind"] end
+    return capital
+end
+
 function TB.OrderCapital()
     if UnitFactionGroup then
         local faction = UnitFactionGroup("player")
@@ -282,7 +290,7 @@ function TB.OrderMeetState(order)
     if not TB.OrderNeedsMeet(order) then return false, nil end
     local state = string.lower(trim(order.state or ""))
     if state == "working" then
-        return false, "Still gathering materials"
+        return false, L["Still gathering materials"]
     end
     if state == "waiting" and string.lower(trim(order.reason or "")) == "needitems" then
         local held = false
@@ -297,21 +305,21 @@ function TB.OrderMeetState(order)
                 table.insert(names, label or ("item #" .. tostring(entry.id)))
             end
             if table.getn(names) == 0 then
-                return false, "You carry none of the missing materials"
+                return false, L["You carry none of the missing materials"]
             end
-            return false, "You carry none of the missing materials: " .. table.concat(names, ", ")
+            return false, string.format(L["You carry none of the missing materials: %s"], table.concat(names, ", "))
         end
     end
     local left = TB.GetOrderMeetCooldown(order.bot)
     if left then
         local mins = math.floor((left + 59) / 60)
         if mins < 1 then mins = 1 end
-        return false, "Try again in " .. mins .. " min"
+        return false, string.format(L["Try again in %s min"], tostring(mins))
     end
     local zone = TB.OrderPlayerZone()
     local capital = TB.OrderCapital()
     if zone and zone ~= capital and zone ~= capital .. " City" then
-        return false, "Go to " .. capital
+        return false, string.format(L["Go to %s"], capitalName(capital))
     end
     return true, nil
 end
@@ -326,17 +334,17 @@ end
 -- need (needs items from you), deliver. "-" or a missing field on old
 -- servers means none; unknown steps show raw, never crash.
 local STEP_LABEL = {
-    bags = "checking bags and mail", bank = "taking from guild bank",
-    ah = "buying on AH", farm = "farming", craft = "crafting",
-    sub = "waiting for sub-order", need = "needs items from you",
-    deliver = "delivering",
+    bags = L["checking bags and mail"], bank = L["taking from guild bank"],
+    ah = L["buying on AH"], farm = L["farming"], craft = L["crafting"],
+    sub = L["waiting for sub-order"], need = L["needs items from you"],
+    deliver = L["delivering"],
 }
 
 function TB.OrderStepLabel(order)
     if not order then return nil end
     local step = string.lower(trim(order.step or ""))
     if step == "" or step == "-" then return nil end
-    if step == "farm" and order.zone then return "farming in " .. order.zone end
+    if step == "farm" and order.zone then return string.format(L["farming in %s"], order.zone) end
     return STEP_LABEL[step] or trim(order.step)
 end
 -- Money in plain coin words: 1g 20s 5c. Used for the guild gold cap; the
@@ -371,8 +379,7 @@ function TB.OrderNeedText(order)
     for _, entry in ipairs(order.need) do
         table.insert(parts, needName(entry.id) .. " x" .. tostring(entry.count or 0))
     end
-    return "Needs: " .. table.concat(parts, ", ")
-        .. " (trade, mail or put in guild bank)"
+    return string.format(L["Needs: %s (trade, mail or put in guild bank)"], table.concat(parts, ", "))
 end
 
 -- ── send missing items (mailbox) ─────────────────────────────────────────
@@ -475,10 +482,10 @@ end
 -- The button is live only at an open mailbox with a bot that needs items.
 function TB.CanSendOrderItems(rootBot)
     if not (MailFrame and MailFrame.IsVisible and MailFrame:IsVisible()) then
-        return false, "Open a mailbox first"
+        return false, L["Open a mailbox first"]
     end
     if not TB.OrderNeedTarget(rootBot) then
-        return false, "No order needs items"
+        return false, L["No order needs items"]
     end
     return true, nil
 end
@@ -496,19 +503,19 @@ function TB.SendOrderMissingItems(rootBot)
     -- the cursor or in the attachment slot, re-addressing the form would send
     -- that item to the bot. Check before any field changes.
     if CursorHasItem and CursorHasItem() then
-        TB.SetOrderFeedback("Nothing changed: your cursor holds an item - drop or place it first", "error")
+        TB.SetOrderFeedback(L["Nothing changed: your cursor holds an item - drop or place it first"], "error")
         return false
     end
     local busyName = sendMailItem()
     if busyName then
-        TB.SetOrderFeedback("Nothing changed: the mail already holds " .. busyName .. " - send or clear it first", "error")
+        TB.SetOrderFeedback(string.format(L["Nothing changed: the mail already holds %s - send or clear it first"], busyName), "error")
         return false
     end
     -- A text-only draft is the player's too: never overwrite it.
     local function boxText(box) return box and box.GetText and box:GetText() or "" end
     if boxText(SendMailNameEditBox) ~= "" or boxText(SendMailSubjectEditBox) ~= ""
         or boxText(SendMailBodyEditBox) ~= "" then
-        TB.SetOrderFeedback("Nothing changed: the mail form already has text - clear it first", "error")
+        TB.SetOrderFeedback(L["Nothing changed: the mail form already has text - clear it first"], "error")
         return false
     end
     -- D4: open the Send tab and fill the boxes (guard every global).
@@ -518,7 +525,7 @@ function TB.SendOrderMissingItems(rootBot)
     if SendMailBodyEditBox and SendMailBodyEditBox.SetText then SendMailBodyEditBox:SetText(draft.body) end
     local stack = TB.FindOrderNeedStack(order)
     if not stack then
-        TB.SetOrderFeedback("None of the needed items are in your bags", "error")
+        TB.SetOrderFeedback(L["None of the needed items are in your bags"], "error")
         return true
     end
     local attached = stack.split or stack.count
@@ -552,13 +559,13 @@ function TB.SendOrderMissingItems(rootBot)
             .. " x" .. tostring(attached) .. " - recipient cleared", "error")
         return true
     end
-    TB.SetOrderFeedback(itemName .. " x" .. tostring(attached) .. " attached - press Send", "ok")
+    TB.SetOrderFeedback(string.format(L["%s x%s attached - press Send"], itemName, tostring(attached)), "ok")
     return true
 end
 
 -- Difficulty estimate from the server: easy / medium / hard in plain words
 -- with a subtle colour, nothing for "-" or old lines without the field.
-local DIFFICULTY_LABEL = { easy = "Easy", medium = "Medium", hard = "Hard" }
+local DIFFICULTY_LABEL = { easy = L["Easy"], medium = L["Medium"], hard = L["Hard"] }
 local DIFFICULTY_COLOR = { easy = "|cff4ecb5a", medium = "|cffffd200", hard = "|cffff5050" }
 
 function TB.OrderDifficultyLabel(difficulty)
@@ -586,7 +593,7 @@ function TB.OrderSkillLabel(skill)
     if skill == "" or skill == "-" then return nil end
     local _, _, id, value = string.find(skill, "^(%d+):(%d+)$")
     if not id then return skill end
-    return (SKILL_NAMES[id] or ("Skill " .. id)) .. " " .. value
+    return (SKILL_NAMES[id] or string.format(L["Skill %s"], id)) .. " " .. value
 end
 
 local function skillName(skill)
@@ -778,39 +785,39 @@ function TB.OrderRowText(order, short)
         if step then text = text .. " · " .. step
         elseif order.zone then text = text .. " (" .. order.zone .. ")" end
     elseif state == "waiting" then
-        text = item .. " " .. progress .. " · " .. word("Waiting")
+        text = item .. " " .. progress .. " · " .. word(L["Waiting"])
         if string.lower(trim(order.reason or "")) ~= "needitems" then
             local step = TB.OrderStepLabel(order)
             if step then text = text .. " · " .. step end
         end
     elseif state == "delivering" then
-        text = word("Delivering") .. " " .. item
+        text = word(L["Delivering"]) .. " " .. item
     elseif state == "done" then
-        text = item .. " · " .. word("Done")
+        text = item .. " · " .. word(L["Done"])
     elseif state == "stocked" then
-        text = item .. " · " .. word("Stocked")
+        text = item .. " · " .. word(L["Stocked"])
     elseif state == "mailed" then
-        text = item .. " · " .. word("Mailed to GM")
+        text = item .. " · " .. word(L["Mailed to GM"])
     elseif state == "noskill" then
-        text = item .. " · " .. word("No skill")
+        text = item .. " · " .. word(L["No skill"])
     elseif state == "cant" then
-        text = item .. " · " .. word("Can't")
+        text = item .. " · " .. word(L["Can't"])
     elseif state == "ready" then
-        text = item .. " · " .. word("Ready") .. " - come to " .. TB.OrderCapital() .. " and press Meet"
+        text = item .. " · " .. word(L["Ready"]) .. string.format(L[" - come to %s and press Meet"], capitalName(TB.OrderCapital()))
     elseif state == "coming" then
-        text = item .. " · " .. word("On the way to you")
+        text = item .. " · " .. word(L["On the way to you"])
     elseif state == "enchanting" then
-        text = item .. " · " .. word("Trade open - put your item in Will not be traded")
+        text = item .. " · " .. word(L["Trade open - put your item in Will not be traded"])
     else
         text = item .. " " .. progress .. " · " .. trim(order.state or "")
     end
     if (state == "working" or (state == "waiting" and string.lower(trim(order.reason or "")) ~= "needitems"))
         and order.need and table.getn(order.need) > 0
-        and not string.find(text, "needs items from you", 1, true) then -- a "need" step label already says it
-        text = text .. " · " .. "|cffffd200needs items from you|r"
+        and not string.find(text, L["needs items from you"], 1, true) then -- a "need" step label already says it
+        text = text .. " · " .. "|cffffd200" .. L["needs items from you"] .. "|r"
     end
     if short then return text end
-    if order.keep and state ~= "stocked" then text = text .. " · " .. word("Keep") end
+    if order.keep and state ~= "stocked" then text = text .. " · " .. word(L["Keep"]) end
     return text
 end
 
@@ -843,34 +850,32 @@ end
 -- client item cache, unknown ids show as "item #<id>".
 function TB.OrderTooltipText(order)
     if not order then return nil end
-    local lines = { "Order: " .. TB.OrderTypeLabel(order.type) .. " " .. (order.item or "?")
+    local lines = { L["Order:"] .. " " .. TB.OrderTypeLabel(order.type) .. " " .. (order.item or "?")
         .. " " .. tostring(order.have or 0) .. "/" .. tostring(order.want or 0) }
-    local state = "State: " .. TB.OrderStateLabel(order.state)
+    local state = L["State:"] .. " " .. TB.OrderStateLabel(order.state)
     local reason = TB.OrderReasonLabel(order.reason)
     if reason then state = state .. " (" .. reason .. ")" end
     table.insert(lines, state)
     local carryTip = math.floor(tonumber(order.carry) or 0)
     if carryTip > 0 then
-        table.insert(lines, "Carrying " .. carryTip .. " (in bags and mail, not yet delivered).")
+        table.insert(lines, string.format(L["Carrying %s (in bags and mail, not yet delivered)."], tostring(carryTip)))
     elseif order.carry == nil and string.lower(trim(order.state or "")) == "working"
         and (order.want or 0) > 0 and (order.have or 0) >= order.want then
-        table.insert(lines, "Not deliverable yet: part of the count is not in the bot's bags (usually still in its mail). It delivers once all are in its bags.")
+        table.insert(lines, L["Not deliverable yet: part of the count is not in the bot's bags (usually still in its mail). It delivers once all are in its bags."])
     end
-    if order.zone then table.insert(lines, "Zone: " .. order.zone) end
+    if order.zone then table.insert(lines, L["Zone:"] .. " " .. order.zone) end
     local step = TB.OrderStepLabel(order)
-    if step then table.insert(lines, "Now: " .. step) end
+    if step then table.insert(lines, L["Now:"] .. " " .. step) end
     if order.goldCap then
-        table.insert(lines, "Max guild gold: " .. TB.OrderGoldText(order.goldCap))
+        table.insert(lines, L["Max guild gold:"] .. " " .. TB.OrderGoldText(order.goldCap))
     end
     local need = TB.OrderNeedText(order)
     if need then table.insert(lines, need) end
     if order.keep and string.lower(trim(order.state or "")) ~= "stocked" then
-        table.insert(lines, "Keep in stock: the bot refills when the bank drops below "
-            .. tostring(order.want or 0))
+        table.insert(lines, string.format(L["Keep in stock: the bot refills when the bank drops below %s"], tostring(order.want or 0)))
     end
     if string.lower(trim(order.state or "")) == "stocked" then
-        table.insert(lines, "Stocked: " .. tostring(order.want or 0) .. " in the bank, the bot refills when it drops below "
-            .. tostring(order.want or 0))
+        table.insert(lines, string.format(L["Stocked: %s in the bank, the bot refills when it drops below %s"], tostring(order.want or 0), tostring(order.want or 0)))
     end
     -- The step timeline rides at the end: newest steps with their age, fetched
     -- on hover (nothing on servers without the guild-order-steps token).
@@ -1060,15 +1065,15 @@ end
 function TB.OrderStepAgeText(sec)
     sec = math.floor(tonumber(sec) or 0)
     if sec < 0 then sec = 0 end
-    if sec < 60 then return "just now" end
-    if sec < 3600 then return math.floor(sec / 60) .. "m ago" end
+    if sec < 60 then return L["just now"] end
+    if sec < 3600 then return string.format(L["%sm ago"], math.floor(sec / 60)) end
     if sec < 86400 then
         local h = math.floor(sec / 3600)
         local m = math.floor(math.mod(sec, 3600) / 60)
-        if m == 0 then return h .. "h ago" end
-        return h .. "h " .. m .. "m ago"
+        if m == 0 then return string.format(L["%sh ago"], h) end
+        return string.format(L["%sh %sm ago"], h, m)
     end
-    return math.floor(sec / 86400) .. "d ago"
+    return string.format(L["%sd ago"], math.floor(sec / 86400))
 end
 
 -- One entry: what the bot did (the live step while working, else the state
@@ -1100,7 +1105,7 @@ local function stepsBlockLines(bot)
     -- there is no tooltip anyway, so the stranded list still reads.
     local current = orders[norm(bot)]
     if current and not sameOrderIdentity(TB.OrderStepIdentity(record), TB.OrderStepIdentity(current)) then return {} end
-    local lines = { "Steps (newest first):" }
+    local lines = { L["Steps (newest first):"] }
     local entries = record.entries
     local count = table.getn(entries)
     local shown = 0
@@ -1113,7 +1118,7 @@ local function stepsBlockLines(bot)
     end
     local earlier = (count - shown) + (record.dropped or 0)
     if earlier > 0 then
-        table.insert(lines, "  ... " .. earlier .. " earlier steps")
+        table.insert(lines, "  ... " .. string.format(L["%s earlier steps"], earlier))
     end
     return lines
 end
@@ -1149,7 +1154,7 @@ function TB.OrderStepsTooltipLines(bot)
     local missed = key and stepsMissed[key]
     local current = key and orders[key]
     if missed and (not current or sameOrderIdentity(missed.identity, orderIdentity(current))) then
-        table.insert(lines, "Steps: history incomplete, retrying")
+        table.insert(lines, L["Steps: history incomplete, retrying"])
     end
     for _, line in ipairs(stepsBlockLines(bot)) do
         table.insert(lines, line)
@@ -1320,18 +1325,17 @@ end
 function TB.OrderAccessText()
     if not orderAccess then return nil end
     if not orderAccess.rankIndex then
-        return { text = "Bots: server does not manage the bots' rank;"
-            .. " their bank access depends on each bot's own rank", bad = false }
+        return { text = L["Bots: server does not manage the bots' rank; their bank access depends on each bot's own rank"], bad = false }
     end
-    local head = "Bots: rank " .. (orderAccess.rankName or ("#" .. orderAccess.rankIndex))
+    local head = string.format(L["Bots: rank %s"], orderAccess.rankName or ("#" .. orderAccess.rankIndex))
     if not orderAccess.tabsOk and not orderAccess.tabsDenied then
-        return { text = head .. " · No guild bank yet", bad = false }
+        return { text = head .. " · " .. L["No guild bank yet"], bad = false }
     end
-    local tail = "bank tabs " .. TB.OrderTabList(orderAccess.tabsOk)
-        .. ", gold " .. (orderAccess.gold and "yes" or "no")
+    local tail = string.format(L["bank tabs %s, gold %s"], TB.OrderTabList(orderAccess.tabsOk),
+        orderAccess.gold and L["yes"] or L["no"])
     if orderAccess.tabsDenied then
-        return { text = head .. " · " .. tail .. " (tabs "
-            .. TB.OrderTabList(orderAccess.tabsDenied) .. " denied)", bad = true }
+        return { text = head .. " · " .. tail .. " (" .. string.format(L["tabs %s denied"],
+            TB.OrderTabList(orderAccess.tabsDenied)) .. ")", bad = true }
     end
     return { text = head .. " · " .. tail, bad = false }
 end
@@ -1360,7 +1364,7 @@ function TB.GetOrderRankOptions()
         end
     end
     if table.getn(names) == 0 then
-        for idx = 1, 9 do names[idx] = "Rank " .. idx end
+        for idx = 1, 9 do names[idx] = string.format(L["Rank %s"], idx) end
     end
     local out = {}
     for idx = 1, 9 do
@@ -1490,7 +1494,7 @@ function TB.OrderWhoBotText(entry)
     for _, bot in ipairs(entry.bots or {}) do
         local text = bot.bot .. " " .. tostring(bot.skill or 0)
             .. " " .. tostring(bot.have or 0) .. "/" .. tostring(bot.need or 0)
-        if bot.busy then text = text .. " (busy)" end
+        if bot.busy then text = text .. " " .. L["(busy)"] end
         table.insert(parts, text)
     end
     return table.concat(parts, ", ")
@@ -1670,11 +1674,11 @@ end
 -- farms, buys, asks for and needs from the player, plus time and gold cap.
 function TB.OrderPreviewText(preview)
     if not preview then return nil end
-    local verb = "gets"
-    if string.lower(trim(preview.kind or "")) == "craft" then verb = "makes" end
+    local headline = L["%s gets %s %s."]
+    if string.lower(trim(preview.kind or "")) == "craft" then headline = L["%s makes %s %s."] end
     local lines = {}
-    table.insert(lines, (preview.bot or "?") .. " " .. verb .. " " .. tostring(preview.want or 0)
-        .. " " .. (preview.item or "?") .. ".")
+    table.insert(lines, string.format(headline, preview.bot or "?", tostring(preview.want or 0),
+        preview.item or "?"))
     local has, farm, ah, sub, player = {}, {}, {}, {}, {}
     for _, row in ipairs(preview.reagents or {}) do
         local name = needName(row.itemId)
@@ -1685,24 +1689,25 @@ function TB.OrderPreviewText(preview)
                 .. (row.zone and (" (" .. row.zone .. ")") or ""))
         end
         if (row.ah or 0) > 0 then table.insert(ah, row.ah .. " " .. name) end
-        if (row.vendor or 0) > 0 then table.insert(ah, row.vendor .. " " .. name .. " (shop)") end
+        if (row.vendor or 0) > 0 then table.insert(ah, string.format(L["%s %s (shop)"], row.vendor, name)) end
         if (row.sub or 0) > 0 then table.insert(sub, row.sub .. " " .. name) end
         if (row.player or 0) > 0 then table.insert(player, row.player .. " " .. name) end
     end
-    if table.getn(has) > 0 then table.insert(lines, "Has: " .. table.concat(has, ", ") .. ".") end
-    if table.getn(farm) > 0 then table.insert(lines, "Will farm: " .. table.concat(farm, ", ") .. ".") end
-    if table.getn(ah) > 0 then table.insert(lines, "May buy: " .. table.concat(ah, ", ") .. ".") end
-    if table.getn(sub) > 0 then table.insert(lines, "Asks guild bots: " .. table.concat(sub, ", ") .. ".") end
+    local sep = L[", "]
+    if table.getn(has) > 0 then table.insert(lines, string.format(L["Has: %s."], table.concat(has, sep))) end
+    if table.getn(farm) > 0 then table.insert(lines, string.format(L["Will farm: %s."], table.concat(farm, sep))) end
+    if table.getn(ah) > 0 then table.insert(lines, string.format(L["May buy: %s."], table.concat(ah, sep))) end
+    if table.getn(sub) > 0 then table.insert(lines, string.format(L["Asks guild bots: %s."], table.concat(sub, sep))) end
     if table.getn(player) > 0 then
-        table.insert(lines, "You need to send: " .. table.concat(player, ", ") .. ".")
+        table.insert(lines, string.format(L["You need to send: %s."], table.concat(player, sep)))
     else
-        table.insert(lines, "You need to send: nothing.")
+        table.insert(lines, L["You need to send: nothing."])
     end
     if (preview.minutes or 0) > 0 then
-        table.insert(lines, "Rough time: about " .. tostring(preview.minutes) .. " min.")
+        table.insert(lines, string.format(L["Rough time: about %s min."], tostring(preview.minutes)))
     end
     if preview.goldCap then
-        table.insert(lines, "Spends at most: " .. TB.OrderGoldText(preview.goldCap) .. ".")
+        table.insert(lines, string.format(L["Spends at most: %s."], TB.OrderGoldText(preview.goldCap)))
     end
     return table.concat(lines, " ")
 end
@@ -1889,7 +1894,7 @@ function TB.ParseOrderMessage(msg)
             end
             if batch.access then orderAccess = batch.access end
             if TB.SetStatus then
-                TB.SetStatus("Orders updated · " .. table.getn(batch.rows), "ok")
+                TB.SetStatus(L["Orders updated"] .. " · " .. table.getn(batch.rows), "ok")
             end
             if TB.RefreshGuildView then TB.RefreshGuildView() end
             if TB.RefreshOrderWindow then TB.RefreshOrderWindow() end
@@ -1916,9 +1921,9 @@ function TB.ParseOrderMessage(msg)
                 cat = searchCat, items = batch.rows }
             if TB.SetStatus then
                 if table.getn(batch.rows) == 0 then
-                    TB.SetStatus("No matching enchants.", "muted")
+                    TB.SetStatus(L["No matching enchants."], "muted")
                 else
-                    TB.SetStatus("Order search · " .. table.getn(batch.rows) .. " enchants", "ok")
+                    TB.SetStatus(string.format(L["Order search · %d enchants"], table.getn(batch.rows)), "ok")
                 end
             end
             if TB.RefreshOrderWindow then TB.RefreshOrderWindow() end
@@ -1945,9 +1950,9 @@ function TB.ParseOrderMessage(msg)
                 cat = searchCat, items = batch.rows }
             if TB.SetStatus then
                 if table.getn(batch.rows) == 0 then
-                    TB.SetStatus("No matching items.", "muted")
+                    TB.SetStatus(L["No matching items."], "muted")
                 else
-                    TB.SetStatus("Order search · " .. table.getn(batch.rows) .. " items", "ok")
+                    TB.SetStatus(string.format(L["Order search · %d items"], table.getn(batch.rows)), "ok")
                 end
             end
             if TB.RefreshOrderWindow then TB.RefreshOrderWindow() end
@@ -1986,9 +1991,9 @@ function TB.ParseOrderMessage(msg)
             lastWhoSearch = { kind = batch.kind, text = whoText, rows = batch.rows }
             if TB.SetStatus then
                 if table.getn(batch.rows) == 0 then
-                    TB.SetStatus("No matching recipes.", "muted")
+                    TB.SetStatus(L["No matching recipes."], "muted")
                 else
-                    TB.SetStatus("Order search · " .. table.getn(batch.rows) .. " recipes", "ok")
+                    TB.SetStatus(string.format(L["Order search · %d recipes"], table.getn(batch.rows)), "ok")
                 end
             end
             if TB.RefreshOrderWindow then TB.RefreshOrderWindow() end
@@ -2041,7 +2046,7 @@ function TB.AnnounceOrderReady(bot)
     local order = orders[bot]
     local name = (order and order.item) or "enchant"
     local capital = TB.OrderCapital()
-    local text = bot .. ": " .. name .. " is ready - come to " .. capital .. " and press Meet"
+    local text = string.format(L["%s: %s is ready - come to %s and press Meet"], bot, name, capitalName(capital))
     if UIErrorsFrame and UIErrorsFrame.AddMessage then
         UIErrorsFrame:AddMessage(text, 1, 0.82, 0)
     elseif RaidWarningFrame and RaidWarningFrame.AddMessage then
@@ -2073,8 +2078,8 @@ end
 local pendingSearchCat = nil
 local ORDER_CATS = { "all", "herb", "ore", "leather", "fish", "cloth", "drop", "other" }
 local ORDER_CAT_LABEL = {
-    all = "All", herb = "Herbs", ore = "Ore", leather = "Leather",
-    fish = "Fish", cloth = "Cloth", drop = "Drops", other = "Other",
+    all = L["All"], herb = L["Herbs"], ore = L["Ore"], leather = L["Leather"],
+    fish = L["Fish"], cloth = L["Cloth"], drop = L["Drops"], other = L["Other"],
 }
 
 -- The server refuses an empty-text browse for the two big kinds (drop,
@@ -2286,20 +2291,19 @@ function TB.ConfirmOrderCancel(bot)
     bot = norm(bot)
     if not bot then return false end
     local order = orders[bot]
-    local text = "Cancel " .. bot .. "'s order?"
+    local text = string.format(L["Cancel %s's order?"], bot)
     if order and order.item then
-        text = "Cancel " .. bot .. "'s order for " .. tostring(order.want or 0)
-            .. "x " .. order.item .. "?"
+        text = string.format(L["Cancel %s's order for %sx %s?"], bot, tostring(order.want or 0), order.item)
     end
     if order and table.getn(TB.OrderChildren(bot)) > 0 then
-        text = text .. "\n\nThis cancels the whole branch: the sub-orders under it go too."
+        text = text .. "\n\n" .. L["This cancels the whole branch: the sub-orders under it go too."]
     end
-    text = text .. "\n\nCancelling also ends keep-in-stock and no-limit orders."
+    text = text .. "\n\n" .. L["Cancelling also ends keep-in-stock and no-limit orders."]
     if StaticPopupDialogs and StaticPopup_Show then
         StaticPopupDialogs["TORTOISEBOTSMANAGER_CANCEL_ORDER"] = {
             text = text,
-            button1 = "Yes",
-            button2 = "No",
+            button1 = L["Yes"],
+            button2 = L["No"],
             OnAccept = function() TB.SendOrderCancel(bot) end,
             timeout = 0,
             whileDead = 1,
@@ -2346,7 +2350,7 @@ function TB.OnOrderAck(packet)
             end
         end
         if TB.SetStatus then
-            TB.SetStatus((bot or "Order") .. ": order cancelled.", "ok")
+            TB.SetStatus(string.format(L["%s: order cancelled."], bot or L["Order"]), "ok")
         end
         if TB.RefreshGuildView then TB.RefreshGuildView() end
         if TB.RefreshOrderWindow then TB.RefreshOrderWindow() end
@@ -2354,7 +2358,7 @@ function TB.OnOrderAck(packet)
     end
     if packet.executor == "reassign" then
         if TB.SetStatus then
-            TB.SetStatus((bot or "Order") .. ": sub-order handed over.", "ok")
+            TB.SetStatus(string.format(L["%s: sub-order handed over."], bot or L["Order"]), "ok")
         end
         TB.RequestOrderList()
         if TB.RefreshGuildView then TB.RefreshGuildView() end
@@ -2364,7 +2368,7 @@ function TB.OnOrderAck(packet)
     if packet.executor == "rank" then
         if TB.SetStatus then
             local _, _, want = string.find(packet.scope or "", "^rank:(.+)$")
-            TB.SetStatus("Bots' rank changed to " .. tostring(want or packet.scope) .. ".", "ok")
+            TB.SetStatus(string.format(L["Bots' rank changed to %s."], tostring(want or packet.scope)), "ok")
         end
         TB.RequestOrderAccess()
         if TB.RefreshGuildView then TB.RefreshGuildView() end
@@ -2382,9 +2386,9 @@ function TB.OnOrderAck(packet)
     end
     if packet.executor == "enchant" then
         if TB.SetStatus then
-            local text = "Enchant order accepted"
+            local text = L["Enchant order accepted."]
             if bot then text = bot .. ": " .. text end
-            TB.SetStatus(text .. ".", "ok")
+            TB.SetStatus(text, "ok")
         end
         if bot and TB.GetOrderWindowBot and TB.GetOrderWindowBot() == bot then
             if TB.CloseOrderWindow then TB.CloseOrderWindow() end
@@ -2393,9 +2397,9 @@ function TB.OnOrderAck(packet)
         return true
     end
     if TB.SetStatus then
-        local text = TB.OrderTypeLabel(packet.executor) .. " order accepted"
+        local text = string.format(L["%s order accepted."], TB.OrderTypeLabel(packet.executor))
         if bot then text = bot .. ": " .. text end
-        TB.SetStatus(text .. ".", "ok")
+        TB.SetStatus(text, "ok")
     end
     if bot and TB.GetOrderWindowBot and TB.GetOrderWindowBot() == bot then
         if TB.CloseOrderWindow then TB.CloseOrderWindow() end
@@ -2418,33 +2422,33 @@ function TB.OnOrderError(packet)
         if give.bring ~= nil then
             pendingGive = { bot = give.bot, kind = give.kind, itemId = give.itemId,
                 amount = give.amount, hours = give.hours, keep = give.keep, gold = give.gold }
-            TB.SetOrderFeedback("Old server: retrying without the materials you bring...", "pending")
+            TB.SetOrderFeedback(L["Old server: retrying without the materials you bring..."], "pending")
             TB.SendOrderGive(give.bot, give.kind, give.itemId, give.amount, give.hours, give.keep, give.gold)
             return false
         end
         if give.gold ~= nil then
             pendingGive = { bot = give.bot, kind = give.kind, itemId = give.itemId,
                 amount = give.amount, hours = give.hours, keep = give.keep, gold = nil, bring = give.bring }
-            TB.SetOrderFeedback("Old server: retrying without the guild gold cap...", "pending")
+            TB.SetOrderFeedback(L["Old server: retrying without the guild gold cap..."], "pending")
             TB.SendOrderGive(give.bot, give.kind, give.itemId, give.amount, give.hours, give.keep, nil, give.bring)
             return false
         end
         if give.keep then
             pendingGive = { bot = give.bot, kind = give.kind, itemId = give.itemId,
                 amount = give.amount, hours = give.hours, keep = false, bring = give.bring }
-            TB.SetOrderFeedback("Old server: retrying without keep in stock...", "pending")
+            TB.SetOrderFeedback(L["Old server: retrying without keep in stock..."], "pending")
             TB.SendOrderGive(give.bot, give.kind, give.itemId, give.amount, give.hours, false, nil, give.bring)
             return false
         end
         if isInf(give.hours) then
             pendingGive = { bot = give.bot, kind = give.kind, itemId = give.itemId,
                 amount = give.amount, hours = HOURS_MAX, keep = false, bring = give.bring }
-            TB.SetOrderFeedback("Old server: no time limit refused, retrying with 24 hours...", "pending")
+            TB.SetOrderFeedback(L["Old server: no time limit refused, retrying with 24 hours..."], "pending")
             TB.SendOrderGive(give.bot, give.kind, give.itemId, give.amount, HOURS_MAX, false, nil, give.bring)
             return false
         end
         pendingGive = nil
-        TB.SetOrderFeedback("Old server: retrying without farm time...", "pending")
+        TB.SetOrderFeedback(L["Old server: retrying without farm time..."], "pending")
         TB.SendOrderGive(give.bot, give.kind, give.itemId, give.amount, nil, false, nil, give.bring)
         return false
     end
@@ -2455,10 +2459,10 @@ function TB.OnOrderError(packet)
         -- retry would fail the same way, so surface the hint instead.
         if string.len(trim(search.text or "")) < SEARCH_MIN then
             pendingGive = nil
-            TB.SetOrderFeedback("Type at least 3 letters to search.", "muted")
+            TB.SetOrderFeedback(L["Type at least 3 letters to search."], "muted")
             return false
         end
-        TB.SetOrderFeedback("Old server: retrying without the kind filter...", "pending")
+        TB.SetOrderFeedback(L["Old server: retrying without the kind filter..."], "pending")
         TB.SendOrderSearch(search.bot, search.kind, search.text)
         return false
     end
@@ -2466,7 +2470,7 @@ function TB.OnOrderError(packet)
     pendingSearchCat = nil
     local message = trim(packet.message)
     if message == "" then message = packet.code end
-    TB.SetOrderFeedback("|cffff5050Order refused:|r " .. message, "err")
+    TB.SetOrderFeedback("|cffff5050" .. L["Order refused:"] .. "|r " .. message, "err")
     -- Meet refusals also reach the player on screen (the same frame the
     -- ready notice uses) and repaint the row: a cooldown refusal starts the
     -- button's countdown, parsed from the server's "N min" text.
@@ -2566,8 +2570,8 @@ local function giveWaitTick()
     if giveWaitUntil and now() >= giveWaitUntil then
         giveWaitUntil = nil
         pendingGive = nil
-        TB.SetOrderFeedback("No answer from the server after " .. GIVE_ANSWER_WAIT
-            .. " s. Check that the order reached the bot, then try again.", "warn")
+        TB.SetOrderFeedback(string.format(L["No answer from the server after %s s. Check that the order reached the bot, then try again."],
+            tostring(GIVE_ANSWER_WAIT)), "warn")
     end
 end
 
@@ -2670,7 +2674,7 @@ end
 function TB.OrderStepNext()
     if orderGuild then return orderStep end
     if orderStep == 1 and not selectedItemId then
-        TB.SetOrderFeedback("Pick an item from the search first.", "warn")
+        TB.SetOrderFeedback(L["Pick an item from the search first."], "warn")
         return orderStep
     end
     return TB.SetOrderStep(orderStep + 1)
@@ -2731,8 +2735,8 @@ function TB.SetOrderCat(cat)
         if win and win.searchBox and windowBot then
             local browseText = trim(win.searchBox:GetText() or "")
             if string.len(browseText) < SEARCH_MIN and not TB.OrderCatBrowsable(cat) then
-                TB.SetOrderFeedback("Type at least 3 letters to search "
-                    .. string.lower(TB.OrderCatLabel(cat) or "items") .. ".", "muted")
+                TB.SetOrderFeedback(string.format(L["Type at least 3 letters to search %s."],
+                    string.lower(TB.OrderCatLabel(cat) or L["items"])), "muted")
             else
                 TB.SendOrderSearch(windowBot, orderKind, browseText, orderCat)
             end
@@ -2902,12 +2906,12 @@ function TB.OrderItemDetail(item, kind, amount, level)
                 return "needs " .. label
             end
         elseif verdict == "lowlevel" then
-            return "needs level 10"
+            return L["needs level 10"]
         elseif verdict == "norange" and level then
-            return "no source near level " .. level
+            return string.format(L["no source near level %s"], level)
         end
         local reason = TB.OrderReasonLabel(item.verdict)
-        return "Can't: " .. (reason or item.verdict)
+        return string.format(L["Can't: %s"], reason or item.verdict)
     end
     local parts = {}
     local sources = TB.OrderSourcesLabel(item.sources)
@@ -2986,7 +2990,7 @@ local function firePendingSearch()
     if orderGuild then
         if string.len(text) < SEARCH_MIN then
             lastWhoSearch = { kind = lastWhoSearch.kind, text = text, rows = {} }
-            TB.SetOrderFeedback("Type at least 3 letters to search.", "muted")
+            TB.SetOrderFeedback(L["Type at least 3 letters to search."], "muted")
             if TB.RefreshOrderWindow then TB.RefreshOrderWindow() end
             return
         end
@@ -3002,10 +3006,10 @@ local function firePendingSearch()
         lastSearch = { bot = windowBot, kind = orderKind, text = text, cat = nil, items = {} }
         selectedItemId = nil
         if orderCat then
-            TB.SetOrderFeedback("Type at least 3 letters to search "
-                .. string.lower(TB.OrderCatLabel(orderCat) or "items") .. ".", "muted")
+            TB.SetOrderFeedback(string.format(L["Type at least 3 letters to search %s."],
+                string.lower(TB.OrderCatLabel(orderCat) or L["items"])), "muted")
         else
-            TB.SetOrderFeedback("Type at least 3 letters to search.", "muted")
+            TB.SetOrderFeedback(L["Type at least 3 letters to search."], "muted")
         end
         if TB.RefreshOrderWindow then TB.RefreshOrderWindow() end
         return
@@ -3047,13 +3051,13 @@ local function createOrderLimits(pane)
     local farmNote = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     farmNote:SetPoint("TOPLEFT", pane, "TOPLEFT", 12, -(base + 2))
     farmNote:SetWidth(OW - 24); farmNote:SetJustifyH("LEFT")
-    farmNote:SetText("Bots farm like players: large amounts or rare drops can take very long or fail.")
+    farmNote:SetText(L["Bots farm like players: large amounts or rare drops can take very long or fail."])
     TB.SetTextColor(farmNote, color("muted"))
     win.farmNote = farmNote
     base = 152 + RESULT_ROW_N * RESULT_ROW_H + 30 + 76
     win.amountLabel = pane:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     win.amountLabel:SetPoint("TOPLEFT", pane, "TOPLEFT", 12, -(base + 4))
-    win.amountLabel:SetText("AMOUNT")
+    win.amountLabel:SetText(L["AMOUNT"])
     TB.SetTextColor(win.amountLabel, color("title"))
 
     local minus = TB.StyleButton(CreateFrame("Button", nil, pane, "UIPanelButtonTemplate"))
@@ -3110,7 +3114,7 @@ local function createOrderLimits(pane)
 
     win.hoursLabel = pane:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     win.hoursLabel:SetPoint("TOPLEFT", pane, "TOPLEFT", 194, -(base + 4))
-    win.hoursLabel:SetText("FARM TIME")
+    win.hoursLabel:SetText(L["FARM TIME"])
     TB.SetTextColor(win.hoursLabel, color("title"))
 
     local hoursBox = CreateFrame("EditBox", "TortoiseBotsManagerOrderHours", pane, "InputBoxTemplate")
@@ -3134,8 +3138,8 @@ local function createOrderLimits(pane)
         this:SetText(tostring(orderHours))
     end)
     win.hoursBox = hoursBox
-    setTooltip(hoursBox, "Farm time",
-        { "Whole hours this order may farm (1-24). The bot stops when the time runs out." })
+    setTooltip(hoursBox, L["Farm time"],
+        { L["Whole hours this order may farm (1-24). The bot stops when the time runs out."] })
 
     local keepBox = CreateFrame("CheckButton", "TortoiseBotsManagerOrderKeep", pane, "UICheckButtonTemplate")
     TB.StyleCheckButton(keepBox)
@@ -3145,18 +3149,18 @@ local function createOrderLimits(pane)
         TB.SetOrderKeep(this:GetChecked() and true or false)
     end)
     win.keepBox = keepBox
-    setTooltip(keepBox, "Keep in stock",
-        { "Delivered, the order stays: the bot watches the bank and refills when it drops below the amount." })
+    setTooltip(keepBox, L["Keep in stock"],
+        { L["Delivered, the order stays: the bot watches the bank and refills when it drops below the amount."] })
     local keepLabel = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     keepLabel:SetPoint("LEFT", keepBox, "RIGHT", 2, 0)
     keepLabel:SetWidth(120); keepLabel:SetJustifyH("LEFT")
-    keepLabel:SetText("Keep in stock")
+    keepLabel:SetText(L["Keep in stock"])
     TB.SetTextColor(keepLabel, color("muted"))
     win.keepLabel = keepLabel
 
     local goldLabel = pane:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     goldLabel:SetPoint("TOPLEFT", pane, "TOPLEFT", 12, -(base + 46))
-    goldLabel:SetText("MAX GUILD GOLD")
+    goldLabel:SetText(L["MAX GUILD GOLD"])
     goldLabel:SetWidth(150); goldLabel:SetJustifyH("LEFT")
     TB.SetTextColor(goldLabel, color("title"))
     win.goldLabel = goldLabel
@@ -3189,8 +3193,8 @@ local function createOrderLimits(pane)
         this:SetText(orderGold ~= nil and tostring(orderGold) or "")
     end)
     win.goldBox = goldBox
-    setTooltip(goldBox, "Max guild gold",
-        { "Most the order may spend from the guild bank, in copper. Empty means no cap." })
+    setTooltip(goldBox, L["Max guild gold"],
+        { L["Most the order may spend from the guild bank, in copper. Empty means no cap."] })
     local noLimitBox = CreateFrame("CheckButton", "TortoiseBotsManagerOrderNoLimit", pane, "UICheckButtonTemplate")
     TB.StyleCheckButton(noLimitBox)
     noLimitBox:SetWidth(20); noLimitBox:SetHeight(20)
@@ -3199,12 +3203,12 @@ local function createOrderLimits(pane)
         TB.SetOrderNoLimit(this:GetChecked() and true or false)
     end)
     win.noLimitBox = noLimitBox
-    setTooltip(noLimitBox, "No time limit",
-        { "The bot farms until it has the amount, however long it takes. Only Cancel stops it." })
+    setTooltip(noLimitBox, L["No time limit"],
+        { L["The bot farms until it has the amount, however long it takes. Only Cancel stops it."] })
     local noLimitLabel = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     noLimitLabel:SetPoint("LEFT", noLimitBox, "RIGHT", 2, 0)
     noLimitLabel:SetWidth(110); noLimitLabel:SetJustifyH("LEFT")
-    noLimitLabel:SetText("No time limit")
+    noLimitLabel:SetText(L["No time limit"])
     TB.SetTextColor(noLimitLabel, color("muted"))
     win.noLimitLabel = noLimitLabel
     return base
@@ -3215,7 +3219,7 @@ end
 -- function needs more than the 1.12 client's 32 upvalues.
 local function createOrderStepOne(pane)
     local search = CreateFrame("EditBox", "TortoiseBotsManagerOrderSearch", pane, "InputBoxTemplate")
-    TB.StyleEditBox(search, "Search items")
+    TB.StyleEditBox(search, L["Search items"])
     search:SetWidth(OW - 24); search:SetHeight(20)
     search:SetPoint("TOPLEFT", pane, "TOPLEFT", 12, -66)
     search:SetAutoFocus(false)
@@ -3228,7 +3232,7 @@ local function createOrderStepOne(pane)
             if string.len(text) >= SEARCH_MIN then
                 TB.SendOrderWhoSearch(lastWhoSearch.kind, text)
             else
-                TB.SetOrderFeedback("Type at least 3 letters to search.", "muted")
+                TB.SetOrderFeedback(L["Type at least 3 letters to search."], "muted")
             end
             return
         end
@@ -3239,27 +3243,27 @@ local function createOrderStepOne(pane)
                 or (orderCat and TB.OrderCatBrowsable(orderCat)) then
                 TB.SendOrderSearch(windowBot, orderKind, text, orderCat)
             elseif orderCat then
-                TB.SetOrderFeedback("Type at least 3 letters to search "
-                    .. string.lower(TB.OrderCatLabel(orderCat) or "items") .. ".", "muted")
+                TB.SetOrderFeedback(string.format(L["Type at least 3 letters to search %s."],
+                    string.lower(TB.OrderCatLabel(orderCat) or L["items"])), "muted")
             else
-                TB.SetOrderFeedback("Type at least 3 letters to search.", "muted")
+                TB.SetOrderFeedback(L["Type at least 3 letters to search."], "muted")
             end
         end
     end)
     search:SetScript("OnTextChanged", function() armSearch() end)
     win.searchBox = search
 
-    local kinds = { { "Farm", "farm" }, { "Buy", "buy" }, { "Craft", "craft" }, { "Enchant", "enchant" } }
+    local kinds = { { L["Farm"], "farm" }, { L["Buy"], "buy" }, { L["Craft"], "craft" }, { L["Enchant"], "enchant" } }
     win.kindPills = {}
     local kindWidths = { 76, 56, 76, 96 }
     local kindX = 12
     for i, entry in ipairs(kinds) do
         local pill = TB.UI.CreateTogglePill(pane, entry[1], kindWidths[i], 22, {
             tipTitle = entry[1],
-            tip = entry[2] == "farm" and "Gather or kill for the items."
-                or (entry[2] == "buy" and "Buy on the auction house first, farm the rest."
-                    or (entry[2] == "craft" and "Craft from materials, farming what is missing."
-                        or "Search this bot's enchants and order one (spell id).")),
+            tip = entry[2] == "farm" and L["Gather or kill for the items."]
+                or (entry[2] == "buy" and L["Buy on the auction house first, farm the rest."]
+                    or (entry[2] == "craft" and L["Craft from materials, farming what is missing."]
+                        or L["Search this bot's enchants and order one (spell id)."])),
         })
         pill:SetPoint("TOPLEFT", pane, "TOPLEFT", kindX, -90)
         kindX = kindX + kindWidths[i] + 4
@@ -3278,7 +3282,7 @@ local function createOrderStepOne(pane)
     for i, cat in ipairs(ORDER_CATS) do
         local pill = TB.UI.CreateTogglePill(pane, ORDER_CAT_LABEL[cat], 74, 18, {
             tipTitle = ORDER_CAT_LABEL[cat],
-            tip = "Only show this kind of item.",
+            tip = L["Only show this kind of item."],
         })
         pill:SetPoint("TOPLEFT", pane, "TOPLEFT", 12 + math.mod(i - 1, 4) * 80,
             -116 - math.floor((i - 1) / 4) * 22)
@@ -3324,7 +3328,7 @@ local function createOrderStepOne(pane)
             local item = this.item
             if not item then return end
             if string.lower(trim(item.verdict or "")) ~= "ok" then
-                TB.SetOrderFeedback("This bot can't get it: "
+                TB.SetOrderFeedback(L["This bot can't get it:"] .. " "
                     .. TB.OrderItemDetail(item, orderKind, orderAmount, botLevel()) .. ".", "warn")
                 return
             end
@@ -3345,12 +3349,12 @@ local function createOrderStepOne(pane)
             end
             local diff = TB.OrderDifficultyLabel(item.difficulty)
             if diff then
-                GameTooltip:AddLine("Difficulty: " .. diff, 0.9, 0.9, 0.9, 1)
-                GameTooltip:AddLine("Rough effort for this bot: how many kills, gathers or casts it needs",
+                GameTooltip:AddLine(string.format(L["Difficulty: %s"], diff), 0.9, 0.9, 0.9, 1)
+                GameTooltip:AddLine(L["Rough effort for this bot: how many kills, gathers or casts it needs"],
                     0.9, 0.9, 0.9, 1)
             end
             if TB.OrderDropRate(orderKind, item.sources, item.chance) then
-                GameTooltip:AddLine("Rare drops can take many hours. Give reasonable orders.",
+                GameTooltip:AddLine(L["Rare drops can take many hours. Give reasonable orders."],
                     0.9, 0.9, 0.9, 1)
             end
             GameTooltip:Show()
@@ -3440,22 +3444,22 @@ local function createOrderStepThree(pane, base)
     end
 
     win.stepThreeBase = base
-    win.sendBtn = smallButton(pane, "Send", 76, 194, -(base + 112),
-        "Send order", "Give this bot the order (replaces its old one).",
+    win.sendBtn = smallButton(pane, L["Send"], 76, 194, -(base + 112),
+        L["Send order"], L["Give this bot the order (replaces its old one)."],
         function()
             TB.SendOrderFromStepThree()
         end)
 
-    win.cancelBtn = smallButton(pane, "Cancel", 62, 274, -(base + 112),
-        "Cancel order", "Remove this bot's current order. Cancelling also ends keep-in-stock and no-limit orders.",
+    win.cancelBtn = smallButton(pane, L["Cancel"], 62, 274, -(base + 112),
+        L["Cancel order"], L["Remove this bot's current order. Cancelling also ends keep-in-stock and no-limit orders."],
         function()
             if windowBot then TB.ConfirmOrderCancel(windowBot) end
         end)
 
     -- Fills the Send Mail form for the bot that needs items; the player
     -- presses Send. Enabled only at an open mailbox with a need (D2/D3).
-    win.sendItemsBtn = smallButton(pane, "Send missing items", 176, 12, -(base + 112),
-        "Send missing items", "Fill the mail form for the bot that needs items.",
+    win.sendItemsBtn = smallButton(pane, L["Send missing items"], 176, 12, -(base + 112),
+        L["Send missing items"], L["Fill the mail form for the bot that needs items."],
         function()
             TB.SendOrderMissingItems(TB.GetOrderWindowBot())
         end)
@@ -3488,10 +3492,10 @@ end
 -- into the guild bank, mailed ones to the guild master. nil otherwise.
 function TB.OrderDeliveredTo(order)
     local state = order and string.lower(trim(order.state or "")) or ""
-    if state == "mailed" then return "Mailbox (guild master)" end
+    if state == "mailed" then return L["Mailbox (guild master)"] end
     if state ~= "done" then return nil end
-    if string.lower(trim(order.type or "")) == "enchant" then return "Trade" end
-    return "Guild bank"
+    if string.lower(trim(order.type or "")) == "enchant" then return L["Trade"] end
+    return L["Guild bank"]
 end
 local function confirmReplace(bot, go)
     local old = TB.GetBotOrder(bot)
@@ -3501,11 +3505,10 @@ local function confirmReplace(bot, go)
         return
     end
     StaticPopupDialogs["TORTOISEBOTSMANAGER_REPLACE_ORDER"] = {
-        text = bot .. " is already working on " .. TB.OrderTypeLabel(old.type) .. " " .. (old.item or "?")
-            .. " (" .. tostring(old.have or 0) .. "/" .. tostring(old.want or 0)
-            .. "). Replace it with this order?",
-        button1 = "Replace",
-        button2 = "Keep",
+        text = string.format(L["%s is already working on %s %s (%s/%s). Replace it with this order?"], bot,
+            TB.OrderTypeLabel(old.type), old.item or "?", tostring(old.have or 0), tostring(old.want or 0)),
+        button1 = L["Replace"],
+        button2 = (TB.HasTranslation("Keep (current order)") and L["Keep (current order)"] or "Keep"),
         OnAccept = go,
         timeout = 0,
         whileDead = 1,
@@ -3542,25 +3545,25 @@ function TB.SendOrderFromStepThree()
         return
     end
     if string.lower(trim(item.verdict or "")) ~= "ok" then
-        TB.SetOrderFeedback("This bot can't get it.", "warn")
+        TB.SetOrderFeedback(L["This bot can't get it."], "warn")
         return
     end
     if orderKind == "enchant" then
         if selectedItemId and windowBot then
             confirmReplace(windowBot, function()
                 TB.SetOrderFeedback(TB.OrderTypeLabel(orderKind) .. " " .. item.item
-                    .. " sent, waiting for the server...", "pending")
+                    .. " " .. L["sent, waiting for the server..."], "pending")
                 TB.SendOrderGive(windowBot, "enchant", selectedItemId)
             end)
         end
         return
     end
-    local timeText = orderNoLimit and "no limit" or (orderHours .. "h")
+    local timeText = orderNoLimit and L["no limit"] or (orderHours .. "h")
     local goldText = orderGold and (" " .. TB.OrderGoldText(orderGold)) or ""
     confirmReplace(windowBot, function()
         TB.SetOrderFeedback(TB.OrderTypeLabel(orderKind) .. " " .. item.item
-            .. " x" .. orderAmount .. " (" .. timeText .. (orderKeep and ", keep" or "")
-            .. goldText .. ") sent, waiting for the server...", "pending")
+            .. " x" .. orderAmount .. " (" .. timeText .. (orderKeep and L[", keep"] or "")
+            .. goldText .. ") " .. L["sent, waiting for the server..."], "pending")
         TB.SendOrderGive(windowBot, orderKind, item.itemId, orderAmount,
             orderNoLimit and "inf" or orderHours, orderKeep, orderGold, orderBring)
     end)
@@ -3602,7 +3605,7 @@ local function createWindow()
     local head = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     head:SetPoint("TOPRIGHT", win, "TOPRIGHT", -12, -50)
     head:SetWidth(OW - 24 - 90); head:SetJustifyH("RIGHT")
-    head:SetText("Pick an item, how and how many.")
+    head:SetText(L["Pick an item, how and how many."])
     TB.SetTextColor(head, color("muted"))
     win.head = head
 
@@ -3614,7 +3617,7 @@ local function createWindow()
     win.wipNote = win:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     win.wipNote:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -36)
     win.wipNote:SetWidth(OW - 24); win.wipNote:SetJustifyH("LEFT")
-    win.wipNote:SetText("Work in progress, there may be bugs")
+    win.wipNote:SetText(L["Work in progress, there may be bugs"])
     TB.SetTextColor(win.wipNote, { 1, 0.82, 0, 1 })
 
     win.stepOne = CreateFrame("Frame", nil, win)
@@ -3641,7 +3644,7 @@ local function createWindow()
     win.stepThree:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", 0, 0)
     win.treeLabel = win.stepThree:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     win.treeLabel:SetPoint("TOPLEFT", win.stepThree, "TOPLEFT", 12, -(152 + RESULT_ROW_N * RESULT_ROW_H + 4 + 18))
-    win.treeLabel:SetText("ORDERS")
+    win.treeLabel:SetText(L["ORDERS"])
     win.treeLabel:SetWidth(200); win.treeLabel:SetJustifyH("LEFT")
     TB.SetTextColor(win.treeLabel, color("title"))
 
@@ -3657,14 +3660,14 @@ local function createWindow()
     local base = createOrderLimits(win.stepTwo)
     createOrderStepThree(win.stepThree, base - 84)
 
-    win.backBtn = smallButton(win, "Back", 76, 12, 0,
-        "Go back", "Go back one step. Your pick is kept.",
+    win.backBtn = smallButton(win, L["Back"], 76, 12, 0,
+        L["Go back"], L["Go back one step. Your pick is kept."],
         function()
             TB.SetOrderStep(orderStep - 1)
         end)
 
-    win.nextBtn = smallButton(win, "Next", 76, 194, 0,
-        "Next step", "Continue to the next step.",
+    win.nextBtn = smallButton(win, L["Next"], 76, 194, 0,
+        L["Next step"], L["Continue to the next step."],
         function()
             TB.OrderStepNext()
         end)
@@ -3713,7 +3716,7 @@ local function updateOrderStepPane()
     end
     if win.nextBtn then
         if orderStep >= 3 then win.nextBtn:Disable() else win.nextBtn:Enable() end
-        win.nextBtn:SetText("Next")
+        win.nextBtn:SetText(L["Next"])
     end
 end
 
@@ -3748,12 +3751,12 @@ function TB.RefreshOrderWindow()
     updateOrderStepPane()
     if win.stepLabel then
         if orderGuild then win.stepLabel:SetText("")
-        else win.stepLabel:SetText("Step " .. orderStep .. " of 3") end
+        else win.stepLabel:SetText(string.format(L["Step %s of %s"], tostring(orderStep), "3")) end
     end
     if orderGuild then
-        win.title:SetText("Order for the guild: pick a bot")
+        win.title:SetText(L["Order for the guild: pick a bot"])
     else
-        win.title:SetText("Order for " .. (windowBot or "?"))
+        win.title:SetText(string.format(L["Order for %s"], windowBot or "?"))
     end
     for kind, pill in pairs(win.kindPills or {}) do
         if orderGuild then
@@ -3771,7 +3774,7 @@ function TB.RefreshOrderWindow()
             if kind == "buy" and not TB.PlayerBuyAllowed() then pill:Hide() else pill:Show() end
             if kind == "enchant" then
                 local hasEnchanting = botHasSkill(windowBot, ENCHANT_SKILL)
-                setPillUsable(pill, hasEnchanting, "This bot has no Enchanting.")
+                setPillUsable(pill, hasEnchanting, L["This bot has no Enchanting."])
                 if orderKind == "enchant" and not hasEnchanting then TB.SetOrderKind("farm") end
             end
         end
@@ -3828,7 +3831,7 @@ function TB.RefreshGuildOrderRows()
             local extra = 0
             if table.getn(bots) > 3 then extra = table.getn(bots) - 3 end
             if table.getn(bots) == 0 then
-                row.detail:SetText("no guild bot knows it")
+                row.detail:SetText(L["no guild bot knows it"])
             else
                 local line = TB.OrderWhoBotText({ bots = bots })
                 if extra > 0 then line = line .. " (+" .. extra .. " more)" end
@@ -3866,11 +3869,11 @@ function TB.RefreshGuildOrderRows()
         if total == 0 then
             local text = trim(win.searchBox:GetText() or "")
             if string.len(text) < SEARCH_MIN then
-                win.emptyMsg:SetText("Type at least 3 letters to search.")
+                win.emptyMsg:SetText(L["Type at least 3 letters to search."])
             elseif search.kind == lastWhoSearch.kind then
-                win.emptyMsg:SetText("No matching recipes.")
+                win.emptyMsg:SetText(L["No matching recipes."])
             else
-                win.emptyMsg:SetText("Searching...")
+                win.emptyMsg:SetText(L["Searching..."])
             end
             if orderStep <= 1 then win.emptyMsg:Show() end
         else
@@ -3935,13 +3938,13 @@ function TB.RefreshPerBotOrderRows()
         if total == 0 then
             local text = trim(win.searchBox:GetText() or "")
             if string.len(text) < SEARCH_MIN and not orderCat then
-                win.emptyMsg:SetText("Type at least 3 letters to search.")
+                win.emptyMsg:SetText(L["Type at least 3 letters to search."])
             elseif search.bot == windowBot and search.kind == orderKind
                 and (search.cat or nil) == (orderCat or nil) then
-                if orderKind == "enchant" then win.emptyMsg:SetText("No matching enchants.")
-                else win.emptyMsg:SetText("No matching items.") end
+                if orderKind == "enchant" then win.emptyMsg:SetText(L["No matching enchants."])
+                else win.emptyMsg:SetText(L["No matching items."]) end
             else
-                win.emptyMsg:SetText("Searching...")
+                win.emptyMsg:SetText(L["Searching..."])
             end
             if orderStep <= 1 then win.emptyMsg:Show() end
         else
@@ -3965,7 +3968,7 @@ function TB.RefreshOrderChrome(order)
             if accessText.bad then win.accessLabel:SetTextColor(1, 0.34, 0.28)
             else win.accessLabel:SetTextColor(0.62, 0.60, 0.56) end
         else
-            win.accessLabel:SetText("Bank access: waiting for the server...")
+            win.accessLabel:SetText(L["Bank access: waiting for the server..."])
             win.accessLabel:SetTextColor(0.62, 0.60, 0.56)
         end
         if orderStep <= 1 then win.accessLabel:Show() else win.accessLabel:Hide() end
@@ -3997,11 +4000,11 @@ function TB.RefreshOrderChrome(order)
     end
     if win.statusLine then
         if orderGuild then
-            win.statusLine:SetText("Pick a bot to open its order flow.")
+            win.statusLine:SetText(L["Pick a bot to open its order flow."])
         elseif order then
-            win.statusLine:SetText("Current: " .. TB.OrderRowText(order))
+            win.statusLine:SetText(string.format(L["Current: %s"], TB.OrderRowText(order)))
         else
-            win.statusLine:SetText("No order on this bot.")
+            win.statusLine:SetText(L["No order on this bot."])
         end
     end
     if win.cancelBtn then
@@ -4017,7 +4020,7 @@ function TB.RefreshOrderChrome(order)
         -- The tooltip names the bot and its need, or why the button is dead.
         win.sendItemsBtn:SetScript("OnEnter", function()
             GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-            GameTooltip:SetText("Send missing items")
+            GameTooltip:SetText(L["Send missing items"])
             if canSend then
                 local bot, needOrder = TB.OrderNeedTarget(windowBot)
                 local need = needOrder and TB.OrderNeedText(needOrder)
@@ -4080,8 +4083,8 @@ function TB.RefreshOrderChrome(order)
         else TB.SetTextColor(win.goldLabel, color("title")) end
     end
     if win.farmNote then
-        if isEnchantKind then win.farmNote:SetText("Meet the bot in Stormwind or Orgrimmar to trade the enchant.")
-        else win.farmNote:SetText("Bots farm like players: large amounts or rare drops can take very long or fail.") end
+        if isEnchantKind then win.farmNote:SetText(L["Meet the bot in Stormwind or Orgrimmar to trade the enchant."])
+        else win.farmNote:SetText(L["Bots farm like players: large amounts or rare drops can take very long or fail."]) end
     end
     if win.previewLine then
         local previewText = nil
@@ -4092,7 +4095,7 @@ function TB.RefreshOrderChrome(order)
             and orderPreview.want == orderAmount then
             previewText = TB.OrderPreviewText(orderPreview)
         elseif previewPending then
-            previewText = "Preview: asking the server..."
+            previewText = L["Preview: asking the server..."]
         end
         if previewText then
             win.previewLine:SetText(previewText)
@@ -4129,7 +4132,7 @@ function TB.RefreshOrderBringRows()
         if row then
             local name = needName(row.itemId)
             box.bringId = row.itemId
-            box.bringLabel:SetText("I bring it: " .. name .. " x" .. tostring(row.need or 0))
+            box.bringLabel:SetText(string.format(L["I bring it: %s x%s"], name, tostring(row.need or 0)))
             if box.SetChecked then box:SetChecked(TB.OrderBringTicked(orderBring, row.itemId)) end
             if TB.CanGiveOrders() then box:Enable() else box:Disable() end
         else
@@ -4341,7 +4344,7 @@ function TB.BuildOrderRankMenu(addButton)
     local options = TB.GetOrderRankOptions()
     for _, option in ipairs(options) do
         local label = option.name
-        if option.current then label = label .. " (current)" end
+        if option.current then label = label .. " " .. L["(current)"] end
         if option.current then
             addButton({ text = label, notCheckable = 1, disabled = 1 })
         else
@@ -4387,7 +4390,7 @@ function TB.OpenOrderReassignMenu(subBot, owner)
     if not subBot then return false end
     if not UIDropDownMenu_Initialize or not ToggleDropDownMenu then return false end
     if table.getn(TB.GetOrderReassignCandidates(subBot)) == 0 then
-        TB.SetOrderFeedback("No other guild bots to hand it to.", "warn")
+        TB.SetOrderFeedback(L["No other guild bots to hand it to."], "warn")
         return false
     end
     if not TB._orderReassignMenu then
@@ -4405,12 +4408,12 @@ end
 function TB.ConfirmOrderRank(index, name)
     index = math.floor(tonumber(index) or -1)
     if index < 0 then return false end
-    local text = "Move all guild bots to rank " .. (name or ("#" .. index)) .. "?"
+    local text = string.format(L["Move all guild bots to rank %s?"], name or ("#" .. index))
     if StaticPopupDialogs and StaticPopup_Show then
         StaticPopupDialogs["TORTOISEBOTSMANAGER_ORDER_RANK"] = {
             text = text,
-            button1 = "Yes",
-            button2 = "No",
+            button1 = L["Yes"],
+            button2 = L["No"],
             OnAccept = function() TB.SendOrderRank(index) end,
             timeout = 0,
             whileDead = 1,
@@ -4427,12 +4430,12 @@ function TB.ConfirmOrderReassign(subBot, newBot)
     subBot = norm(subBot)
         newBot = norm(newBot)
     if not subBot or not newBot or subBot == newBot then return false end
-    local text = "Hand " .. subBot .. "'s sub-order to " .. newBot .. "?"
+    local text = string.format(L["Hand %s's sub-order to %s?"], subBot, newBot)
     if StaticPopupDialogs and StaticPopup_Show then
         StaticPopupDialogs["TORTOISEBOTSMANAGER_ORDER_REASSIGN"] = {
             text = text,
-            button1 = "Yes",
-            button2 = "No",
+            button1 = L["Yes"],
+            button2 = L["No"],
             OnAccept = function() TB.SendOrderReassign(subBot, newBot) end,
             timeout = 0,
             whileDead = 1,

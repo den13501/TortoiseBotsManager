@@ -13,6 +13,7 @@
 -- how to pin one).
 
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C or {}
 local COL = C.COLOR or {}
 
@@ -24,12 +25,12 @@ local FLY_W = 132
 local FLY_ROWS = 4
 
 local CATEGORIES = {
-    { key = "engage", label = "Engage", sections = { "engage" } },
-    { key = "pull", label = "Pull & Focus", sections = { "pull" } },
-    { key = "move", label = "Move", sections = { "move", "stance" } },
-    { key = "switch", label = "Party switches", sections = { "switch" } },
-    { key = "tactic", label = "Tactics", sections = { "tactic" } },
-    { key = "camp", label = "Camp", sections = { "rest", "quests" } },
+    { key = "engage", label = L["Engage"], sections = { "engage" } },
+    { key = "pull", label = L["Pull & Focus"], sections = { "pull" } },
+    { key = "move", label = L["Move"], sections = { "move", "stance" } },
+    { key = "switch", label = L["Party switches"], sections = { "switch" } },
+    { key = "tactic", label = L["Tactics"], sections = { "tactic" } },
+    { key = "camp", label = L["Camp"], sections = { "rest", "quests" } },
 }
 
 local STANCE_ICON = "Interface\\Icons\\Ability_Warrior_DefensiveStance"
@@ -70,8 +71,8 @@ function TB.SetMiniLayout(layout)
     else TortoiseBotsDB.miniLayout = "horizontal" end
     if TB.LayoutMiniBar then TB.LayoutMiniBar() end
     if TB.SetStatus then
-        if TortoiseBotsDB.miniLayout == "vertical" then TB.SetStatus("Mini bar is vertical.", "ok")
-        else TB.SetStatus("Mini bar is horizontal.", "ok") end
+        if TortoiseBotsDB.miniLayout == "vertical" then TB.SetStatus(L["Mini bar is vertical."], "ok")
+        else TB.SetStatus(L["Mini bar is horizontal."], "ok") end
     end
 end
 
@@ -163,7 +164,7 @@ local function tooltipFor(def)
     if def.pull then
         local db = TortoiseBotsDB or {}
         local seconds = def.intent == "pullback" and db.pullbackDelay or db.pullDelay
-        text = text .. " Timer: " .. TB.ClampPullSeconds(seconds) .. " s (set it in the full window)."
+        text = text .. " " .. string.format(L["Timer: %s s (set it in the full window)."], TB.ClampPullSeconds(seconds))
     end
     if def.toggle then
         local state = TB.GetPartyToggleState and TB.GetPartyToggleState(def.toggle)
@@ -238,17 +239,17 @@ function TB.ToggleMiniFavorite(intent)
         if fav == intent then
             table.remove(favs, i)
             if TB.LayoutMiniBar then TB.LayoutMiniBar() end
-            if TB.SetStatus then TB.SetStatus(name .. " dropped from the mini bar.", "ok") end
+            if TB.SetStatus then TB.SetStatus(string.format(L["%s dropped from the mini bar."], name), "ok") end
             return false
         end
     end
     if table.getn(favs) >= MAX_FAVORITES then
-        if TB.SetStatus then TB.SetStatus("The mini bar holds " .. MAX_FAVORITES .. " favourites: drop one first.", "warn") end
+        if TB.SetStatus then TB.SetStatus(string.format(L["The mini bar holds %s favourites: drop one first."], tostring(MAX_FAVORITES)), "warn") end
         return false
     end
     table.insert(favs, intent)
     if TB.LayoutMiniBar then TB.LayoutMiniBar() end
-    if TB.SetStatus then TB.SetStatus(name .. " pinned to the mini bar.", "ok") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["%s pinned to the mini bar."], name), "ok") end
     return true
 end
 
@@ -319,7 +320,7 @@ local function createFlyout()
     close:SetScript("OnClick", function() TB.OpenMiniCategory(nil) end)
     flyout.hint = flyout:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     flyout.hint:SetPoint("BOTTOMLEFT", flyout, "BOTTOMLEFT", 10, 7)
-    flyout.hint:SetText("Right-click: add to or drop from the favourites.")
+    flyout.hint:SetText(L["Right-click: add to or drop from the favourites."])
     TB.SetTextColor(flyout.hint, color("faint"))
     flyout.entries = {}
     for i = 1, FLY_COLS * FLY_ROWS do
@@ -360,7 +361,7 @@ local function createFlyout()
         e:SetScript("OnEnter", function()
             if this.def then
                 showTooltip(this, this.def, isFavorite(this.def.intent)
-                    and "In your favourites (right-click drops it)." or "Right-click: add to your favourites.")
+                    and L["In your favourites (right-click drops it)."] or L["Right-click: add to your favourites."])
             end
         end)
         e:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -571,9 +572,9 @@ local function createBar()
     end)
     handle:SetScript("OnEnter", function()
         GameTooltip:SetOwner(this, "ANCHOR_TOP")
-        GameTooltip:SetText("TortoiseBots - mini mode")
-        GameTooltip:AddLine("Drag to move. Category icons open their actions; right-click one to keep it on the bar. The + button opens the full window.", 0.9, 0.9, 0.9, 1)
-        GameTooltip:AddLine("Right-click: horizontal or vertical bar.", 0.95, 0.72, 0.28)
+        GameTooltip:SetText(L["TortoiseBots - mini mode"])
+        GameTooltip:AddLine(L["Drag to move. Category icons open their actions; right-click one to keep it on the bar. The + button opens the full window."], 0.9, 0.9, 0.9, 1)
+        GameTooltip:AddLine(L["Right-click: horizontal or vertical bar."], 0.95, 0.72, 0.28)
         GameTooltip:Show()
     end)
     handle:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -595,7 +596,7 @@ local function createBar()
         b:SetScript("OnEnter", function()
             GameTooltip:SetOwner(this, "ANCHOR_TOP")
             GameTooltip:SetText(this.category.label)
-            GameTooltip:AddLine("Click: show its actions.", 0.9, 0.9, 0.9, 1)
+            GameTooltip:AddLine(L["Click: show its actions."], 0.9, 0.9, 0.9, 1)
             GameTooltip:Show()
         end)
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -619,7 +620,7 @@ local function createBar()
             end
         end)
         b:SetScript("OnEnter", function()
-            if this.def then showTooltip(this, this.def, "Right-click: drop it from the bar.", this.slot) end
+            if this.def then showTooltip(this, this.def, L["Right-click: drop it from the bar."], this.slot) end
         end)
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
         b:Hide()
@@ -628,7 +629,7 @@ local function createBar()
     bar.empty = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     bar.empty:SetWidth(180); bar.empty:SetJustifyH("LEFT")
     bar.empty:SetJustifyV("TOP")
-    bar.empty:SetText("No favourites yet: right-click an action to pin it here.")
+    bar.empty:SetText(L["No favourites yet: right-click an action to pin it here."])
     TB.SetTextColor(bar.empty, color("muted"))
 
     local expand = TB.StyleButton(CreateFrame("Button", nil, bar, "UIPanelButtonTemplate"), "mode")
@@ -644,8 +645,8 @@ local function createBar()
     expand:SetScript("OnClick", function() TB.SetMode("full") end)
     expand:SetScript("OnEnter", function()
         GameTooltip:SetOwner(this, "ANCHOR_TOP")
-        GameTooltip:SetText("Full window")
-        GameTooltip:AddLine("Switch back to the full TortoiseBots window.", 0.9, 0.9, 0.9, 1)
+        GameTooltip:SetText(L["Full window"])
+        GameTooltip:AddLine(L["Switch back to the full TortoiseBots window."], 0.9, 0.9, 0.9, 1)
         GameTooltip:Show()
     end)
     expand:SetScript("OnLeave", function() GameTooltip:Hide() end)

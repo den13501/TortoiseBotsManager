@@ -26,6 +26,7 @@
 -- terminal path (header+lines, empty list, timeout, close, bot switch).
 
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C or {}
 local COL = C.COLOR or {}
 local NW = 300
@@ -66,7 +67,7 @@ function TB.SetNpcPending(name, pending)
 end
 
 local function clearOp(name)
-    if TB.CompleteOperation then TB.CompleteOperation(name, "command", true, "NPC query sent.") end
+    if TB.CompleteOperation then TB.CompleteOperation(name, "command", true, L["NPC query sent."]) end
     local st = TB.GetState and TB.GetState(name) or nil
     if st then st.pendingAI = nil; st.pendingAIUntil = nil end
 end
@@ -76,28 +77,28 @@ end
 function TB.SendNpcTalk(name)
     name = norm(name)
     if not name then return false end
-    if TB.SetStatus then TB.SetStatus(name .. " talks to the selected NPC…", "pending") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["%s talks to the selected NPC…"], name), "pending") end
     return TB.SendBotCommand("command " .. name .. " talk")
 end
 
 function TB.SendNpcHome(name)
     name = norm(name)
     if not name then return false end
-    if TB.SetStatus then TB.SetStatus(name .. " binds at this inn…", "pending") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["%s binds at this inn…"], name), "pending") end
     return TB.SendBotCommand("command " .. name .. " home")
 end
 
 function TB.SendNpcTrainerLearn(name)
     name = norm(name)
     if not name then return false end
-    if TB.SetStatus then TB.SetStatus(name .. " learns from this trainer…", "pending") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["%s learns from this trainer…"], name), "pending") end
     return TB.SendBotCommand("command " .. name .. " trainer learn")
 end
 
 function TB.SendNpcGiveLeader(name)
     name = norm(name)
     if not name then return false end
-    if TB.SetStatus then TB.SetStatus(name .. " passes you the lead…", "pending") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["%s passes you the lead…"], name), "pending") end
     return TB.SendBotCommand("command " .. name .. " give leader")
 end
 
@@ -165,7 +166,7 @@ function TB.RequestFlights(name)
     -- follows a list query, so the command op is completed on send: leaving
     -- it would show a working state until it times out.
     clearOp(name)
-    if TB.SetStatus then TB.SetStatus("Asking " .. name .. " for flights…", "pending") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["Asking %s for flights…"], name), "pending") end
     if TB.RefreshNpc then TB.RefreshNpc() end
     return sent
 end
@@ -176,7 +177,7 @@ function TB.SendNpcFly(name, n)
     if not name or not n then return false end
     local e = npcs[name]
     if e then e.pending = false; e.header = false end
-    if TB.SetStatus then TB.SetStatus(name .. " flies…", "pending") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["%s flies…"], name), "pending") end
     return TB.SendBotCommand("command " .. name .. " taxi " .. n)
 end
 
@@ -242,35 +243,35 @@ local function createNpc()
     TB.StyleCloseButton(close, -7, -6)
     close:SetScript("OnClick", function() TB.CloseNpc() end)
 
-    npc.talk = orderButton(npc, "Talk", 12, -38,
-        "The bot greets the NPC you both stand at.",
-        "Talk", function()
+    npc.talk = orderButton(npc, L["Talk"], 12, -38,
+        L["The bot greets the NPC you both stand at."],
+        L["Talk"], function()
             if currentBot then TB.SendNpcTalk(currentBot) end
         end)
-    npc.home = orderButton(npc, "Bind home", 154, -38,
-        "The bot binds its hearthstone at this innkeeper.",
-        "Bind home", function()
+    npc.home = orderButton(npc, L["Bind home"], 154, -38,
+        L["The bot binds its hearthstone at this innkeeper."],
+        L["Bind home"], function()
             if currentBot then TB.SendNpcHome(currentBot) end
         end)
-    npc.trainer = orderButton(npc, "Train spells", 12, -64,
-        "The bot learns what it can from the trainer you both stand at.",
-        "Train spells", function()
+    npc.trainer = orderButton(npc, L["Train spells"], 12, -64,
+        L["The bot learns what it can from the trainer you both stand at."],
+        L["Train spells"], function()
             if currentBot then TB.SendNpcTrainerLearn(currentBot) end
         end)
-    npc.leader = orderButton(npc, "Take lead", 154, -64,
-        "The bot passes party leadership to you.",
-        "Take lead", function()
+    npc.leader = orderButton(npc, L["Take lead"], 154, -64,
+        L["The bot passes party leadership to you."],
+        L["Take lead"], function()
             if currentBot then TB.SendNpcGiveLeader(currentBot) end
         end)
 
     local flights = npc:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     flights:SetPoint("TOPLEFT", npc, "TOPLEFT", 12, -92)
-    flights:SetText("FLIGHTS")
+    flights:SetText(L["FLIGHTS"])
     TB.SetTextColor(flights, color("title"))
     local flightHint = npc:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     flightHint:SetPoint("TOPLEFT", npc, "TOPLEFT", 140, -92)
     flightHint:SetWidth(NW - 152); flightHint:SetJustifyH("RIGHT")
-    flightHint:SetText("Be at a flight master.")
+    flightHint:SetText(L["Be at a flight master."])
     TB.SetTextColor(flightHint, color("muted"))
 
     npc.rows = {}
@@ -286,7 +287,7 @@ local function createNpc()
     local flightEmpty = npc:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     flightEmpty:SetPoint("TOPLEFT", npc, "TOPLEFT", 12, -168)
     flightEmpty:SetWidth(NW - 24); flightEmpty:SetJustifyH("CENTER")
-    flightEmpty:SetText("Stand at a flight master and click Find flights.")
+    flightEmpty:SetText(L["Stand at a flight master and click Find flights."])
     TB.SetTextColor(flightEmpty, color("muted"))
     npc.flightEmpty = flightEmpty
 
@@ -294,11 +295,11 @@ local function createNpc()
     npc.ask = TB.StyleButton(CreateFrame("Button", nil, npc, "UIPanelButtonTemplate"))
     npc.ask:SetWidth(134); npc.ask:SetHeight(22)
     npc.ask:SetPoint("TOPLEFT", npc, "TOPLEFT", 12, -108 - ROWS * 22)
-    npc.ask:SetText("Find flights")
+    npc.ask:SetText(L["Find flights"])
     npc.ask:SetScript("OnClick", function()
         if currentBot then TB.RequestFlights(currentBot) end
     end)
-    setTooltip(npc.ask, "Find flights", { "Lists this flight master's routes, then pick one." })
+    setTooltip(npc.ask, L["Find flights"], { L["Lists this flight master's routes, then pick one."] })
 
     local prev = TB.StyleButton(CreateFrame("Button", nil, npc, "UIPanelButtonTemplate"))
     prev:SetWidth(26); prev:SetHeight(22)
@@ -333,7 +334,7 @@ local function renderRows()
         if flight then
             row.flightN = flight.n
             row:SetText(flight.n .. ": " .. flight.name)
-            setTooltip(row, flight.name, { "Click: fly this leg." })
+            setTooltip(row, flight.name, { L["Click: fly this leg."] })
             row:Show()
             row:Enable()
         else
@@ -346,10 +347,10 @@ local function renderRows()
     if page > 1 then npc.prevPage:Enable() else npc.prevPage:Disable() end
     if page < pages then npc.nextPage:Enable() else npc.nextPage:Disable() end
     if e and e.pending and table.getn(list) == 0 then
-        npc.ask:SetText("Asking…")
+        npc.ask:SetText(L["Asking…"])
         npc.ask:Disable()
     else
-        npc.ask:SetText("Find flights")
+        npc.ask:SetText(L["Find flights"])
         npc.ask:Enable()
     end
     if npc.flightEmpty then
@@ -370,9 +371,9 @@ function TB.RefreshNpc()
     local list = renderRows()
     if e and e.header then
         if table.getn(list) == 0 then
-            npc.ask:SetText("No flights here")
+            npc.ask:SetText(L["No flights here"])
         else
-            npc.ask:SetText("Find flights")
+            npc.ask:SetText(L["Find flights"])
         end
     end
 end

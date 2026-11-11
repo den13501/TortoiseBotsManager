@@ -10,6 +10,7 @@
 -- Items are addressed by the server's own bag/slot pair.
 
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C or {}
 local COL = C.COLOR or {}
 
@@ -297,7 +298,7 @@ function TB.RequestSpells(name)
     entry.pending = true
     entry.at = now()
     spellLists[name] = entry
-    if TB.SetStatus then TB.SetStatus("Asking " .. name .. " for its spellbook…", "pending") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["Asking %s for its spellbook…"], name), "pending") end
     if TB.RefreshBotPanel then TB.RefreshBotPanel() end
     return TB.SendBotCommand("command " .. name .. " spells")
 end
@@ -306,7 +307,7 @@ function TB.SendBotCast(name, spellName)
     name = norm(name)
     spellName = TB.Trim(spellName or "")
     if not name or spellName == "" then return false end
-    if TB.SetStatus then TB.SetStatus(name .. " casts " .. spellName .. "…", "pending") end
+    if TB.SetStatus then TB.SetStatus(string.format(L["%s casts %s…"], name, spellName), "pending") end
     return TB.SendBotCommand("command " .. name .. " cast " .. spellName)
 end
 
@@ -538,11 +539,11 @@ end
 -- field (older server) falls back to today's itemId rule.
 local RECIPE_ORDER_REASON = {
     ok = nil,
-    norecipe = "The bot does not know this recipe",
-    enchant = "Enchants cannot be ordered yet",
-    bound = "Soulbound when made, cannot be handed over",
-    needsprofession = "Needs a profession to use",
-    cooldown = "Long cooldown, cannot be ordered",
+    norecipe = L["The bot does not know this recipe"],
+    enchant = L["Enchants cannot be ordered yet"],
+    bound = L["Soulbound when made, cannot be handed over"],
+    needsprofession = L["Needs a profession to use"],
+    cooldown = L["Long cooldown, cannot be ordered"],
 }
 
 function TB.ProfessionRecipeOrderable(recipe)
@@ -565,14 +566,14 @@ end
 
 -- Trade-skill names, mirroring the order search's SKILL_NAMES (BotOrder.lua).
 local PROFESSION_NAMES = {
-    ["129"] = "First Aid", ["164"] = "Blacksmithing", ["165"] = "Leatherworking",
-    ["171"] = "Alchemy", ["182"] = "Herbalism", ["185"] = "Cooking",
-    ["186"] = "Mining", ["197"] = "Tailoring", ["202"] = "Engineering",
-    ["333"] = "Enchanting", ["356"] = "Fishing", ["393"] = "Skinning",
+    ["129"] = L["First Aid"], ["164"] = L["Blacksmithing"], ["165"] = L["Leatherworking"],
+    ["171"] = L["Alchemy"], ["182"] = L["Herbalism"], ["185"] = L["Cooking"],
+    ["186"] = L["Mining"], ["197"] = L["Tailoring"], ["202"] = L["Engineering"],
+    ["333"] = (TB.HasTranslation("Enchanting (profession)") and L["Enchanting (profession)"] or "Enchanting"), ["356"] = L["Fishing"], ["393"] = L["Skinning"],
 }
 
 function TB.ProfessionSkillName(skillId)
-    return PROFESSION_NAMES[tostring(skillId or "")] or ("Skill " .. tostring(skillId or "?"))
+    return PROFESSION_NAMES[tostring(skillId or "")] or string.format(L["Skill %s"], tostring(skillId or "?"))
 end
 
 -- Guild row tooltip line: "Mining 245/300, Blacksmithing 230/300". Skills
@@ -591,7 +592,7 @@ end
 -- Missing row source: "Trainer" when taught only by a trainer
 -- (recipeItem 0), else the recipe item name (client cache or the id).
 function TB.ProfessionMissingSourceText(missing)
-    if not missing or (tonumber(missing.recipeItem) or 0) <= 0 then return "Trainer" end
+    if not missing or (tonumber(missing.recipeItem) or 0) <= 0 then return L["Trainer"] end
     if GetItemInfo then
         local name = GetItemInfo(missing.recipeItem)
         if name then return name end
@@ -749,7 +750,7 @@ local function sendLinkOrder(verb, id)
         requestItem(id)
         pendingLink = { bot = currentBot, verb = verb, id = id,
             label = (C.ACTION_LABELS and C.ACTION_LABELS[verb]) or verb }
-        if TB.SetStatus then TB.SetStatus("Loading item #" .. id .. "…", "pending") end
+        if TB.SetStatus then TB.SetStatus(string.format(L["Loading item #%s…"], tostring(id)), "pending") end
         return false
     end
     pendingLink = nil
@@ -765,9 +766,9 @@ function TB.ConfirmDestroyItem(id)
     local what = link or ("item #" .. id)
     if StaticPopupDialogs and StaticPopup_Show then
         StaticPopupDialogs["TORTOISEBOTSMANAGER_DESTROY_ITEM"] = {
-            text = "Destroy " .. what .. " on " .. currentBot .. "?\n\nThis cannot be undone.",
-            button1 = "Destroy",
-            button2 = "Cancel",
+            text = string.format(L["Destroy %s on %s?\n\nThis cannot be undone."], what, currentBot),
+            button1 = L["Destroy"],
+            button2 = L["Cancel"],
             OnAccept = function()
                 sendLinkOrder("destroy", id)
                 if TB.RequestInventory then TB.RequestInventory(currentBot) end
@@ -791,12 +792,12 @@ function TB.SendItemUse(id)
     local link = linkText(id)
     if not link then
         requestItem(id)
-        pendingLink = { bot = currentBot, verb = "u", id = id, label = "Use" }
-        if TB.SetStatus then TB.SetStatus("Loading item…", "pending") end
+        pendingLink = { bot = currentBot, verb = "u", id = id, label = L["Use"] }
+        if TB.SetStatus then TB.SetStatus(L["Loading item…"], "pending") end
         return false
     end
     pendingLink = nil
-    if TB.SetStatus then TB.SetStatus(("Use → " .. currentBot .. "…"), "pending") end
+    if TB.SetStatus then TB.SetStatus((L["Use"] .. " → " .. currentBot .. "…"), "pending") end
     return TB.SendBotCommand("command " .. currentBot .. " u " .. link)
 end
 
@@ -822,24 +823,24 @@ function TB.OnBotPanelAck(packet)
         id = tonumber(id)
         local text
         if op == "trade" then
-            text = "Trade open with " .. botName .. ". Put your items in and accept - the bot accepts on its own."
+            text = string.format(L["Trade open with %s. Put your items in and accept - the bot accepts on its own."], botName)
         elseif op == "give" and detail == "pending" then
-            text = "Opening trade with " .. botName .. "; " .. itemLabel(id) .. " goes in when the window opens."
+            text = string.format(L["Opening trade with %s; %s goes in when the window opens."], botName, itemLabel(id))
         elseif op == "give" then
             pendingGive = nil
-            text = itemLabel(id) .. " is in the trade window. Accept the trade to take it."
+            text = string.format(L["%s is in the trade window. Accept the trade to take it."], itemLabel(id))
         elseif op == "equip" then
-            text = botName .. " equipped " .. itemLabel(id) .. "."
+            text = string.format(L["%s equipped %s."], botName, itemLabel(id))
         elseif op == "unequip" then
-            text = botName .. " put " .. itemLabel(id) .. " in its bags."
+            text = string.format(L["%s put %s in its bags."], botName, itemLabel(id))
         else
-            text = intent .. " accepted"
+            text = string.format(L["%s accepted"], intent)
         end
         if TB.SetStatus then TB.SetStatus(text, "ok") end
         return true
     end
     if intent == "service portal" then
-        if TB.SetStatus then TB.SetStatus("Portal open by " .. botName .. ".", "ok") end
+        if TB.SetStatus then TB.SetStatus(string.format(L["Portal open by %s."], botName), "ok") end
         return true
     end
     local _, _, key = string.find(intent, "^behavior%s+(%S+)$")
@@ -847,7 +848,7 @@ function TB.OnBotPanelAck(packet)
         behaviorPending[norm(botName) .. "|" .. key] = nil
         local label = key
         for _, b in ipairs(C.BEHAVIORS or {}) do if b.key == key then label = b.label end end
-        if TB.SetStatus then TB.SetStatus(botName .. ": " .. label .. " " .. (packet.executor == "on" and "on" or "off"), "ok") end
+        if TB.SetStatus then TB.SetStatus(botName .. ": " .. label .. " " .. (packet.executor == "on" and L["on"] or L["off"]), "ok") end
         if TB.RefreshBotPanel then TB.RefreshBotPanel() end
         return true
     end
@@ -902,19 +903,19 @@ local function createItemButton(parent)
             else
                 GameTooltip:SetText(itemLabel(entry.id))
             end
-            if entry.upgrade then GameTooltip:AddLine("Upgrade for " .. (currentBot or "this bot"), 0.25, 1, 0.25) end
+            if entry.upgrade then GameTooltip:AddLine(string.format(L["Upgrade for %s"], currentBot or L["this bot"]), 0.25, 1, 0.25) end
             if entry.equipped then
-                GameTooltip:AddLine("Click: unequip", 0.62, 0.60, 0.56)
+                GameTooltip:AddLine(L["Click: unequip"], 0.62, 0.60, 0.56)
             else
-                local hint = entry.equippable and "Click: equip or give to you" or "Click: give to you"
-                if entry.noTrade and entry.equippable then hint = "Click: equip (cannot be traded)" end
-                if entry.noTrade and not entry.equippable then hint = "Soulbound - stays with the bot" end
+                local hint = entry.equippable and L["Click: equip or give to you"] or L["Click: give to you"]
+                if entry.noTrade and entry.equippable then hint = L["Click: equip (cannot be traded)"] end
+                if entry.noTrade and not entry.equippable then hint = L["Soulbound - stays with the bot"] end
                 GameTooltip:AddLine(hint, 0.62, 0.60, 0.56)
             end
-            GameTooltip:AddLine("Shift-click: link in chat", 0.62, 0.60, 0.56)
+            GameTooltip:AddLine(L["Shift-click: link in chat"], 0.62, 0.60, 0.56)
         else
-            GameTooltip:SetText(this.slotLabel or "Empty")
-            GameTooltip:AddLine("Nothing equipped", 0.62, 0.60, 0.56)
+            GameTooltip:SetText(this.slotLabel or L["Empty"])
+            GameTooltip:AddLine(L["Nothing equipped"], 0.62, 0.60, 0.56)
         end
         GameTooltip:Show()
     end)
@@ -982,13 +983,13 @@ local function createMenu(parent)
         setTooltip(btn, label, { tip })
         return btn
     end
-    menu.first = button("Equip", -6, "The bot equips this item.")
-    menu.second = button("Give to me", -30, "Opens a trade with the bot and puts this item in. Accept the trade to take it.")
-    menu.third = button("Use", -54, "The bot uses this item (food, drink, potion).")
-    menu.fourth = button("Disenchant", -78, "The bot disenchants this item into dust or shards.")
-    menu.fifth = button("Send by mail", -102, "The bot mails this item to you.")
-    menu.sixth = button("Put to bank", -126, "The bot stores this item in its bank.")
-    menu.seventh = button("|cffff5555Destroy|r", -150, "The bot destroys this item. Cannot be undone.")
+    menu.first = button(L["Equip"], -6, L["The bot equips this item."])
+    menu.second = button(L["Give to me"], -30, L["Opens a trade with the bot and puts this item in. Accept the trade to take it."])
+    menu.third = button(L["Use"], -54, L["The bot uses this item (food, drink, potion)."])
+    menu.fourth = button(L["Disenchant"], -78, L["The bot disenchants this item into dust or shards."])
+    menu.fifth = button(L["Send by mail"], -102, L["The bot mails this item to you."])
+    menu.sixth = button(L["Put to bank"], -126, L["The bot stores this item in its bank."])
+    menu.seventh = button("|cffff5555" .. L["Destroy"] .. "|r", -150, L["The bot destroys this item. Cannot be undone."])
     -- A panel-sized catcher closes the menu on a click outside it. It is a
     -- plain panel child (no global mouse hook), shown only with the menu, so
     -- other addons never see it.
@@ -1017,7 +1018,7 @@ local function createMenu(parent)
             self:SetPoint(myPt, owner, relPt, flipX and 8 or -8, flipY and -8 or 8)
         end
         if entry.equipped then
-            self.first:SetText("Unequip")
+            self.first:SetText(L["Unequip"])
             self.first:Enable()
             self.first.op = "unequip"
             self.second:Hide()
@@ -1028,7 +1029,7 @@ local function createMenu(parent)
             self.seventh:Hide()
             self:SetHeight(34)
         else
-            self.first:SetText("Equip")
+            self.first:SetText(L["Equip"])
             self.first.op = "equip"
             if entry.equippable then self.first:Enable() else self.first:Disable() end
             self.second:Show()
@@ -1133,16 +1134,16 @@ local function createPanel()
     TB.StyleCloseButton(close, -7, -7)
     close:SetScript("OnClick", function() TB.CloseBotPanel() end)
 
-    panel.tabGear = makeTab(panel, "Gear", 10, 58, "gear")
-    panel.tabBags = makeTab(panel, "Bags", 72, 58, "bags")
-    panel.tabBehavior = makeTab(panel, "Behaviour", 134, 62, "behavior")
-    panel.tabSpells = makeTab(panel, "Spells", 200, 56, "spells")
-    panel.tabProfs = makeTab(panel, "Professions", 260, 60, "profs")
-    setTooltip(panel.tabGear, "Gear", { "What the bot wears. Click a slot to unequip." })
-    setTooltip(panel.tabBags, "Bags", { "Everything in the bot's bags. Click an item to equip it or take it." })
-    setTooltip(panel.tabBehavior, "Behaviour", { "Per-bot combat habits, stored on the server." })
-    setTooltip(panel.tabSpells, "Spells", { "What this bot can cast. Click a spell to cast it." })
-    setTooltip(panel.tabProfs, "Professions", { "Trade skills, recipes and what the bot could still learn.", "Asks the server once; Refresh asks again." })
+    panel.tabGear = makeTab(panel, L["Gear"], 10, 58, "gear")
+    panel.tabBags = makeTab(panel, L["Bags"], 72, 58, "bags")
+    panel.tabBehavior = makeTab(panel, L["Behaviour"], 134, 62, "behavior")
+    panel.tabSpells = makeTab(panel, L["Spells"], 200, 56, "spells")
+    panel.tabProfs = makeTab(panel, L["Professions"], 260, 60, "profs")
+    setTooltip(panel.tabGear, L["Gear"], { L["What the bot wears. Click a slot to unequip."] })
+    setTooltip(panel.tabBags, L["Bags"], { L["Everything in the bot's bags. Click an item to equip it or take it."] })
+    setTooltip(panel.tabBehavior, L["Behaviour"], { L["Per-bot combat habits, stored on the server."] })
+    setTooltip(panel.tabSpells, L["Spells"], { L["What this bot can cast. Click a spell to cast it."] })
+    setTooltip(panel.tabProfs, L["Professions"], { L["Trade skills, recipes and what the bot could still learn."], L["Asks the server once; Refresh asks again."] })
 
     -- Gear view: paper doll around the bot's 3D model.
     local gear = CreateFrame("Frame", nil, panel)
@@ -1191,8 +1192,8 @@ local function createPanel()
     local sweep = TB.StyleButton(CreateFrame("Button", nil, bags, "UIPanelButtonTemplate"))
     sweep:SetWidth(110); sweep:SetHeight(20)
     sweep:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -12, -72)
-    sweep:SetText("Equip upgrades")
-    setTooltip(sweep, "Equip upgrades (new loot)", { "The bot scans its bags and equips everything better.", "Footer → Auto-gear does a full re-gear from bags instead." })
+    sweep:SetText(L["Equip upgrades"])
+    setTooltip(sweep, L["Equip upgrades (new loot)"], { L["The bot scans its bags and equips everything better."], L["Footer → Auto-gear does a full re-gear from bags instead."] })
     sweep:SetScript("OnClick", function()
         if currentBot then TB.SendBotCommand("command " .. currentBot .. " d equip upgrades") end
     end)
@@ -1223,7 +1224,7 @@ local function createPanel()
     local legend = bags:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     legend:SetPoint("TOPLEFT", panel, "TOPLEFT", 136, -370)
     legend:SetWidth(PW - 148); legend:SetJustifyH("RIGHT")
-    legend:SetText("|cff40ff40+|r upgrade · grey = soulbound")
+    legend:SetText("|cff40ff40+|r " .. L["upgrade · grey = soulbound"])
     TB.SetTextColor(legend, color("muted"))
 
     -- Behaviour view: two columns of toggle chips.
@@ -1232,7 +1233,7 @@ local function createPanel()
     panel.behavior = behavior
     local bhTitle = behavior:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     bhTitle:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -78)
-    bhTitle:SetText("Combat habits of this bot (saved on the server)")
+    bhTitle:SetText(L["Combat habits of this bot (saved on the server)"])
     TB.SetTextColor(bhTitle, color("title"))
     panel.behaviorChips = {}
     for i, def in ipairs(C.BEHAVIORS or {}) do
@@ -1242,7 +1243,7 @@ local function createPanel()
         chip.lamp = chip:CreateTexture(nil, "OVERLAY")
         chip.lamp:SetWidth(8); chip.lamp:SetHeight(8)
         chip.lamp:SetPoint("RIGHT", chip, "RIGHT", -8, 0)
-        setTooltip(chip, def.label, { def.tip, "Click to switch on/off." })
+        setTooltip(chip, def.label, { def.tip, L["Click to switch on/off."] })
         chip:SetScript("OnClick", function()
             if currentBot then TB.SendBehavior(currentBot, this.def.key) end
         end)
@@ -1251,7 +1252,7 @@ local function createPanel()
     local bhHint = behavior:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     bhHint:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -258)
     bhHint:SetWidth(PW - 24); bhHint:SetJustifyH("LEFT")
-    bhHint:SetText("Party-wide switches live on the Fight tab; these override one bot.")
+    bhHint:SetText(L["Party-wide switches live on the Fight tab; these override one bot."])
     TB.SetTextColor(bhHint, color("muted"))
 
     -- Spells view: the bot's spellbook, one row per known spell.
@@ -1260,7 +1261,7 @@ local function createPanel()
     panel.spells = spellsView
     local spTitle = spellsView:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     spTitle:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -78)
-    spTitle:SetText("What this bot can cast (from the server)")
+    spTitle:SetText(L["What this bot can cast (from the server)"])
     TB.SetTextColor(spTitle, color("title"))
     panel.spellRows = {}
     for i = 1, SPELL_ROWS do
@@ -1269,7 +1270,7 @@ local function createPanel()
         row:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -98 - (i - 1) * 22)
         row.spellId = 0
         row.spellName = nil
-        setTooltip(row, "Spell", { "Click: ask the bot to cast it." })
+        setTooltip(row, L["Spell"], { L["Click: ask the bot to cast it."] })
         row:SetScript("OnClick", function()
             if currentBot and this.spellName then TB.SendBotCast(currentBot, this.spellName) end
         end)
@@ -1278,15 +1279,15 @@ local function createPanel()
     local spellEmpty = spellsView:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     spellEmpty:SetPoint("TOPLEFT", spellsView, "TOPLEFT", 12, -195)
     spellEmpty:SetWidth(260); spellEmpty:SetJustifyH("CENTER")
-    spellEmpty:SetText("Click 'Ask for spellbook' below to list this bot's spells.")
+    spellEmpty:SetText(L["Click 'Ask for spellbook' below to list this bot's spells."])
     TB.SetTextColor(spellEmpty, color("muted"))
     panel.spellEmpty = spellEmpty
 
     local ask = TB.StyleButton(CreateFrame("Button", nil, spellsView, "UIPanelButtonTemplate"))
     ask:SetWidth(150); ask:SetHeight(22)
     ask:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -366)
-    ask:SetText("Ask for spellbook")
-    setTooltip(ask, "Ask for spellbook", { "Lists what this bot can cast.", "Click a row to cast it." })
+    ask:SetText(L["Ask for spellbook"])
+    setTooltip(ask, L["Ask for spellbook"], { L["Lists what this bot can cast."], L["Click a row to cast it."] })
     ask:SetScript("OnClick", function()
         if currentBot then TB.RequestSpells(currentBot) end
     end)
@@ -1318,10 +1319,10 @@ local function createPanel()
     panel.profs = profsView
     local profTitle = profsView:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     profTitle:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -78)
-    profTitle:SetText("Trade skills and recipes (from the server)")
+    profTitle:SetText(L["Trade skills and recipes (from the server)"])
     TB.SetTextColor(profTitle, color("title"))
     local search = CreateFrame("EditBox", "TortoiseBotsManagerProfessionsSearch", profsView, "InputBoxTemplate")
-    TB.StyleEditBox(search, "Search recipes")
+    TB.StyleEditBox(search, L["Search recipes"])
     search:SetWidth(PW - 24); search:SetHeight(20)
     search:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -96)
     search:SetAutoFocus(false)
@@ -1348,7 +1349,7 @@ local function createPanel()
         row.craft = TB.StyleButton(CreateFrame("Button", nil, row, "UIPanelButtonTemplate"))
         row.craft:SetWidth(44); row.craft:SetHeight(16)
         row.craft:SetPoint("RIGHT", row, "RIGHT", 0, 0)
-        row.craft:SetText("Craft")
+        row.craft:SetText(L["Craft"])
         row:SetScript("OnClick", function()
             if this.group and this.groupSkill then
                 profCollapsed[this.groupSkill] = not profCollapsed[this.groupSkill]
@@ -1365,10 +1366,10 @@ local function createPanel()
             GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
             local recipe = this:GetParent().recipe
             if recipe and not TB.ProfessionRecipeOrderable(recipe) then
-                GameTooltip:SetText(TB.ProfessionRecipeOrderReason(recipe) or "Cannot order")
+                GameTooltip:SetText(TB.ProfessionRecipeOrderReason(recipe) or L["Cannot order"])
             else
-                GameTooltip:SetText("Craft order")
-                GameTooltip:AddLine("Opens the order window with Craft and this item picked.", 0.9, 0.9, 0.9, 1)
+                GameTooltip:SetText(L["Craft order"])
+                GameTooltip:AddLine(L["Opens the order window with Craft and this item picked."], 0.9, 0.9, 0.9, 1)
             end
             GameTooltip:Show()
         end)
@@ -1378,14 +1379,14 @@ local function createPanel()
     local profEmpty = profsView:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     profEmpty:SetPoint("TOPLEFT", profsView, "TOPLEFT", 12, -195)
     profEmpty:SetWidth(260); profEmpty:SetJustifyH("CENTER")
-    profEmpty:SetText("Open this view to ask the bot for its professions.")
+    profEmpty:SetText(L["Open this view to ask the bot for its professions."])
     TB.SetTextColor(profEmpty, color("muted"))
     panel.profEmpty = profEmpty
     local profAsk = TB.StyleButton(CreateFrame("Button", nil, profsView, "UIPanelButtonTemplate"))
     profAsk:SetWidth(150); profAsk:SetHeight(22)
     profAsk:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -366)
-    profAsk:SetText("Refresh professions")
-    setTooltip(profAsk, "Refresh professions", { "Asks the bot for its skills and recipes again." })
+    profAsk:SetText(L["Refresh professions"])
+    setTooltip(profAsk, L["Refresh professions"], { L["Asks the bot for its skills and recipes again."] })
     profAsk:SetScript("OnClick", function()
         if currentBot then TB.RequestProfessions(currentBot) end
     end)
@@ -1410,10 +1411,10 @@ local function createPanel()
     local food = TB.StyleButton(CreateFrame("Button", nil, panel, "UIPanelButtonTemplate"))
     food:SetWidth(88); food:SetHeight(20)
     food:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 54)
-    food:SetText("Food & Water")
-    setTooltip(food, "Food & Water", {
-        "The bot opens a trade with conjured food and water in it.",
-        "Accept the trade to take it.",
+    food:SetText(L["Food & Water"])
+    setTooltip(food, L["Food & Water"], {
+        L["The bot opens a trade with conjured food and water in it."],
+        L["Accept the trade to take it."],
     })
     food:SetScript("OnClick", function() TB.SendItemOrder("trade") end)
     panel.foodButton = food
@@ -1422,10 +1423,10 @@ local function createPanel()
     stone:SetWidth(80); stone:SetHeight(20)
     -- Right edge: the weapon slots sit in the middle of this row.
     stone:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 54)
-    stone:SetText("Healthstone")
-    setTooltip(stone, "Healthstone", {
-        "The bot opens a trade with a healthstone in it.",
-        "Accept the trade to take it.",
+    stone:SetText(L["Healthstone"])
+    setTooltip(stone, L["Healthstone"], {
+        L["The bot opens a trade with a healthstone in it."],
+        L["Accept the trade to take it."],
     })
     stone:SetScript("OnClick", function() TB.SendItemOrder("trade") end)
     panel.healthstoneButton = stone
@@ -1433,9 +1434,9 @@ local function createPanel()
     local portal = TB.StyleButton(CreateFrame("Button", nil, panel, "UIPanelButtonTemplate"))
     portal:SetWidth(56); portal:SetHeight(20)
     portal:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 54)
-    portal:SetText("Portal")
-    setTooltip(portal, "Portal", {
-        "The bot opens a portal. Pick where it goes.",
+    portal:SetText(L["Portal"])
+    setTooltip(portal, L["Portal"], {
+        L["The bot opens a portal. Pick where it goes."],
     })
     portal:SetScript("OnClick", function()
         if currentBot then TB.OpenServicePortalMenu(currentBot) end
@@ -1445,11 +1446,11 @@ local function createPanel()
     local trade = TB.StyleButton(CreateFrame("Button", nil, panel, "UIPanelButtonTemplate"))
     trade:SetWidth(44); trade:SetHeight(22)
     trade:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 28)
-    trade:SetText("Trade")
-    setTooltip(trade, "Trade", {
-        "Opens a trade window with this bot.",
-        "Put your items or gold in and accept - the bot accepts on its own.",
-        "To take an item from the bot, click it in Bags → Give to me.",
+    trade:SetText(L["Trade"])
+    setTooltip(trade, L["Trade"], {
+        L["Opens a trade window with this bot."],
+        L["Put your items or gold in and accept - the bot accepts on its own."],
+        L["To take an item from the bot, click it in Bags → Give to me."],
     })
     trade:SetScript("OnClick", function() TB.SendItemOrder("trade") end)
     panel.tradeButton = trade
@@ -1457,8 +1458,8 @@ local function createPanel()
     local refresh = TB.StyleButton(CreateFrame("Button", nil, panel, "UIPanelButtonTemplate"))
     refresh:SetWidth(56); refresh:SetHeight(22)
     refresh:SetPoint("LEFT", trade, "RIGHT", 3, 0)
-    refresh:SetText("Refresh")
-    setTooltip(refresh, "Refresh", { "Reload gear, bags, behaviour, conjured goods and professions from the server." })
+    refresh:SetText(L["Refresh"])
+    setTooltip(refresh, L["Refresh"], { L["Reload gear, bags, behaviour, conjured goods and professions from the server."] })
     refresh:SetScript("OnClick", function()
         if currentBot then TB.RequestInventory(currentBot) end
         if currentBot then TB.RequestProfessions(currentBot) end
@@ -1470,8 +1471,8 @@ local function createPanel()
     local npcLink = TB.StyleButton(CreateFrame("Button", nil, panel, "UIPanelButtonTemplate"))
     npcLink:SetWidth(38); npcLink:SetHeight(22)
     npcLink:SetPoint("LEFT", refresh, "RIGHT", 3, 0)
-    npcLink:SetText("NPC")
-    setTooltip(npcLink, "NPC errands", { "Talk, bind, learn and flights for this bot." })
+    npcLink:SetText(L["NPC"])
+    setTooltip(npcLink, L["NPC errands"], { L["Talk, bind, learn and flights for this bot."] })
     npcLink:SetScript("OnClick", function()
         if currentBot and TB.OpenNpc then TB.OpenNpc(currentBot) end
     end)
@@ -1480,8 +1481,8 @@ local function createPanel()
     local vaultLink = TB.StyleButton(CreateFrame("Button", nil, panel, "UIPanelButtonTemplate"))
     vaultLink:SetWidth(44); vaultLink:SetHeight(22)
     vaultLink:SetPoint("LEFT", npcLink, "RIGHT", 3, 0)
-    vaultLink:SetText("Bank")
-    setTooltip(vaultLink, "Bank and mail", { "Lists what this bot keeps in its bank and mailbox." })
+    vaultLink:SetText(L["Bank"])
+    setTooltip(vaultLink, L["Bank and mail"], { L["Lists what this bot keeps in its bank and mailbox."] })
     vaultLink:SetScript("OnClick", function()
         if currentBot and TB.OpenVault then TB.OpenVault(currentBot) end
     end)
@@ -1490,8 +1491,8 @@ local function createPanel()
     local upkeep = TB.StyleButton(CreateFrame("Button", nil, panel, "UIPanelButtonTemplate"))
     upkeep:SetWidth(50); upkeep:SetHeight(22)
     upkeep:SetPoint("LEFT", vaultLink, "RIGHT", 3, 0)
-    upkeep:SetText("Upkeep")
-    setTooltip(upkeep, "Upkeep", { "Restock this bot: food, drink, reagents, ammo and repairs.", "Only while the bot is online." })
+    upkeep:SetText(L["Upkeep"])
+    setTooltip(upkeep, L["Upkeep"], { L["Restock this bot: food, drink, reagents, ammo and repairs."], L["Only while the bot is online."] })
     upkeep:SetScript("OnClick", function()
         if currentBot then TB.SendBotCommand("maintenance " .. currentBot) end
         if TB.PollList then TB.PollList(true) end
@@ -1501,8 +1502,8 @@ local function createPanel()
     local gearup = TB.StyleButton(CreateFrame("Button", nil, panel, "UIPanelButtonTemplate"))
     gearup:SetWidth(63); gearup:SetHeight(22)
     gearup:SetPoint("LEFT", upkeep, "RIGHT", 3, 0)
-    gearup:SetText("AutoGear")
-    setTooltip(gearup, "Auto-gear (bags)", { "The bot equips the best gear it already owns in its bags.", "Bags → Equip upgrades re-scans and equips new loot instead.", "Only while the bot is online." })
+    gearup:SetText(L["AutoGear"])
+    setTooltip(gearup, L["Auto-gear (bags)"], { L["The bot equips the best gear it already owns in its bags."], L["Bags → Equip upgrades re-scans and equips new loot instead."], L["Only while the bot is online."] })
     gearup:SetScript("OnClick", function()
         if currentBot then TB.SendBotCommand("autogear " .. currentBot) end
         if currentBot then TB.RequestInventory(currentBot) end
@@ -1512,7 +1513,7 @@ local function createPanel()
     local hint = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     hint:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 12, 10)
     hint:SetWidth(PW - 24); hint:SetJustifyH("LEFT")
-    hint:SetText("Click an item for options. Shift-click links it in chat.")
+    hint:SetText(L["Click an item for options. Shift-click links it in chat."])
     TB.SetTextColor(hint, color("muted"))
 
     itemMenu = createMenu(panel)
@@ -1550,16 +1551,16 @@ local function renderHeader(inv)
     local unit = botUnit(currentBot)
     local claimed = TB.GetClaimedEntry and TB.GetClaimedEntry(currentBot)
     if unit and UnitLevel then
-        table.insert(parts, "Lvl " .. (UnitLevel(unit) or "?"))
+        table.insert(parts, string.format(L["Lvl %s"], tostring(UnitLevel(unit) or "?")))
     elseif claimed and claimed.level then
-        table.insert(parts, "Lvl " .. claimed.level)
+        table.insert(parts, string.format(L["Lvl %s"], tostring(claimed.level)))
     end
     if classId and C.CLASS_NAMES then table.insert(parts, C.CLASS_NAMES[classId]) end
     if claimed then
         if claimed.gearLocked then
-            table.insert(parts, "|cffffd200Gear Locked|r")
+            table.insert(parts, "|cffffd200" .. L["Gear Locked"] .. "|r")
         else
-            table.insert(parts, "|cff4ecb5aLeveling|r")
+            table.insert(parts, "|cff4ecb5a" .. L["Leveling"] .. "|r")
         end
     end
     local move = TB.MovementLabel(currentBot)
@@ -1567,7 +1568,7 @@ local function renderHeader(inv)
     panel.subText:SetText(table.concat(parts, " · "))
     panel.moneyText:SetText(inv and formatMoney(inv.money) or "")
     local bagCount = inv and table.getn(inv.items) or 0
-    panel.tabBags:SetText(inv and ("Bags (" .. bagCount .. ")") or "Bags")
+    panel.tabBags:SetText(inv and string.format(L["Bags (%s)"], bagCount) or L["Bags"])
 end
 
 -- Service row: mage food/water and portals, warlock healthstones. Hidden
@@ -1611,14 +1612,14 @@ local function renderGear(inv)
     for _, item in ipairs(inv and inv.items or {}) do
         if item.upgrade then upgrades = upgrades + 1 end
     end
-    local text = inv and "" or "Loading…"
+    local text = inv and "" or L["Loading…"]
     if lowest then
         local pct = math.floor(lowest * 100 + 0.5)
         local hex = pct < 25 and "|cffff4030" or (pct < 60 and "|cffffd200" or "|cff9d9d9d")
-        text = hex .. "Lowest durability " .. pct .. "%|r"
+        text = hex .. string.format(L["Lowest durability %s%%"], pct) .. "|r"
     end
     if upgrades > 0 then
-        text = text .. (text ~= "" and "\n" or "") .. "|cff40ff40" .. upgrades .. " upgrade(s) in bags|r"
+        text = text .. (text ~= "" and "\n" or "") .. "|cff40ff40" .. string.format(L["%s upgrade(s) in bags"], upgrades) .. "|r"
     end
     panel.durabilityText:SetText(text)
     if panel.model then
@@ -1643,10 +1644,10 @@ local function renderBags(inv)
         if item then paintItemButton(b, item) else b.entry = nil; b:Hide() end
     end
     if inv then
-        panel.bagSummary:SetText(table.getn(items) .. " items · " .. (inv.free or 0) .. " of "
-            .. (inv.total or 0) .. " slots free")
+        panel.bagSummary:SetText(string.format(L["%s items · %s of %s slots free"], table.getn(items), inv.free or 0,
+            inv.total or 0))
     else
-        panel.bagSummary:SetText("Loading…")
+        panel.bagSummary:SetText(L["Loading…"])
     end
     panel.pageText:SetText(bagPage .. " / " .. pages)
     if bagPage > 1 then panel.prevPage:Enable() else panel.prevPage:Disable() end
@@ -1704,10 +1705,10 @@ local function renderSpells()
         end
     end
     if entry and entry.pending and table.getn(list) == 0 then
-        panel.spellAsk:SetText("Asking…")
+        panel.spellAsk:SetText(L["Asking…"])
         panel.spellAsk:Disable()
     else
-        panel.spellAsk:SetText(table.getn(list) == 0 and "Ask for spellbook" or "Ask again")
+        panel.spellAsk:SetText(table.getn(list) == 0 and L["Ask for spellbook"] or L["Ask again"])
         panel.spellAsk:Enable()
     end
     panel.spellPageText:SetText(spellPage .. " / " .. pages)
@@ -1812,7 +1813,7 @@ local function renderProfs()
         elseif entry.kind == "group" then
             row.icon:SetTexture(nil)
             local open = not profCollapsed[entry.skill.skill]
-            row.label:SetText((open and "- " or "+ ") .. "Not learned yet (" .. entry.count .. ")")
+            row.label:SetText((open and "- " or "+ ") .. string.format(L["Not learned yet (%s)"], tostring(entry.count)))
             row.label:SetTextColor(0.62, 0.60, 0.56)
             row.group = true
             row.groupSkill = entry.skill.skill
@@ -1907,13 +1908,13 @@ local function renderProfs()
     end
     if not snapshot then
         if TB.HasProfessionsCapability() then
-            panel.profEmpty:SetText("Open this view to ask the bot for its professions.")
+            panel.profEmpty:SetText(L["Open this view to ask the bot for its professions."])
         else
-            panel.profEmpty:SetText("The server does not list professions (no capability).")
+            panel.profEmpty:SetText(L["The server does not list professions (no capability)."])
         end
         panel.profEmpty:Show()
     elseif table.getn(flat) == 0 then
-        panel.profEmpty:SetText(profSearch ~= "" and "No recipes match the search." or "No professions.")
+        panel.profEmpty:SetText(profSearch ~= "" and L["No recipes match the search."] or L["No professions."])
         panel.profEmpty:Show()
     else
         panel.profEmpty:Hide()

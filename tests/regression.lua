@@ -233,6 +233,9 @@ function FauxScrollFrame_GetOffset() return 0 end
 function FauxScrollFrame_OnVerticalScroll() end
 
 for _, file in ipairs({
+    "Locales/Locale.lua",
+    "Locales/zhTW.lua",
+    "Locales/zhCN.lua",
     "Constants.lua",
     "Utils.lua",
     "Core.lua",

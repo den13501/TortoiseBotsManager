@@ -5,6 +5,7 @@
 -- points here for the detail.
 
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C or {}
 local COL = C.COLOR or {}
 local AW = 360
@@ -81,9 +82,9 @@ local function fillDetail(order)
         if reason then stateText = stateText .. "  |cff9a9a9a" .. reason .. "|r" end
         win.state:SetText((TB.OrderTypeLabel and TB.OrderTypeLabel(order.type) or "") .. "  ·  " .. stateText)
         local lines = {}
-        kv(lines, "Zone", order.zone)
-        kv(lines, "Now", TB.OrderStepLabel and TB.OrderStepLabel(order))
-        kv(lines, "Location", TB.OrderDeliveredTo and TB.OrderDeliveredTo(order))
+        kv(lines, L["Zone"], order.zone)
+        kv(lines, L["Now"], TB.OrderStepLabel and TB.OrderStepLabel(order))
+        kv(lines, L["Location"], TB.OrderDeliveredTo and TB.OrderDeliveredTo(order))
         local need = TB.OrderNeedText and TB.OrderNeedText(order)
         if need then table.insert(lines, need) end
         win.info:SetText(table.concat(lines, "\n"))
@@ -110,8 +111,8 @@ function TB.RefreshActiveOrders()
     end
     TB.SetButtonActive(win.activeTab, not showDone)
     TB.SetButtonActive(win.doneTab, showDone)
-    win.empty:SetText(showDone and "No finished orders yet."
-        or "No bot has an order right now. Press Order on a bot in the Guild tab to give one.")
+    win.empty:SetText(showDone and L["No finished orders yet."]
+        or L["No bot has an order right now. Press Order on a bot in the Guild tab to give one."])
     local total = table.getn(rowsView)
     FauxScrollFrame_Update(win.scroll, total, ROW_N, ROW_H)
     local offset = (FauxScrollFrame_GetOffset and FauxScrollFrame_GetOffset(win.scroll)) or 0
@@ -188,7 +189,7 @@ local function createWindow()
     local title = win:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -9)
     TB.StyleTitle(title, 14)
-    title:SetText("Active orders")
+    title:SetText(L["Active orders"])
     TB.SetTextColor(title, color("title"))
     local close = CreateFrame("Button", nil, win, "UIPanelCloseButton")
     TB.StyleCloseButton(close, -7, -6)
@@ -197,14 +198,14 @@ local function createWindow()
     local wip = win:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     wip:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -36)
     wip:SetWidth(AW - 24); wip:SetJustifyH("LEFT")
-    wip:SetText("Work in progress, there may be bugs")
+    wip:SetText(L["Work in progress, there may be bugs"])
     TB.SetTextColor(wip, { 1, 0.82, 0, 1 })
     win.wipNote = wip
 
     local hint = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     hint:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -50)
     hint:SetWidth(AW - 24); hint:SetJustifyH("LEFT")
-    hint:SetText("Click an order to see what the bot is doing.")
+    hint:SetText(L["Click an order to see what the bot is doing."])
     TB.SetTextColor(hint, color("muted"))
 
     local function tabButton(label, x, done)
@@ -222,8 +223,8 @@ local function createWindow()
         end)
         return b
     end
-    win.activeTab = tabButton("Active", 12, false)
-    win.doneTab = tabButton("Done", 96, true)
+    win.activeTab = tabButton(L["Active"], 12, false)
+    win.doneTab = tabButton(L["Done"], 96, true)
 
     local scroll = CreateFrame("ScrollFrame", "TortoiseBotsManagerActiveOrdersScroll", win, "FauxScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", win, "TOPLEFT", 0, -LIST_TOP)
@@ -296,7 +297,7 @@ local function createWindow()
     local stepsTop = top + 46 + 66
     local stepsHead = win:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     stepsHead:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -stepsTop)
-    stepsHead:SetText("Steps, newest first")
+    stepsHead:SetText(L["Steps, newest first"])
     TB.SetTextColor(stepsHead, color("title"))
 
     local stepScroll = CreateFrame("ScrollFrame", "TortoiseBotsManagerActiveStepsScroll", win, "FauxScrollFrameTemplate")
@@ -317,13 +318,13 @@ local function createWindow()
     end
     win.stepsEmpty = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     win.stepsEmpty:SetPoint("TOPLEFT", win, "TOPLEFT", 14, -(stepsTop + 14))
-    win.stepsEmpty:SetText("No steps recorded yet.")
+    win.stepsEmpty:SetText(L["No steps recorded yet."])
     TB.SetTextColor(win.stepsEmpty, color("muted"))
 
     win.cancelBtn = TB.StyleButton(CreateFrame("Button", nil, win, "UIPanelButtonTemplate"), "mode")
     win.cancelBtn:SetWidth(110); win.cancelBtn:SetHeight(20)
     win.cancelBtn:SetPoint("BOTTOMLEFT", win, "BOTTOMLEFT", 12, 10)
-    win.cancelBtn:SetText("Cancel order")
+    win.cancelBtn:SetText(L["Cancel order"])
     win.cancelBtn:SetScript("OnClick", function()
         if picked and TB.ConfirmOrderCancel then TB.ConfirmOrderCancel(picked) end
     end)
@@ -343,14 +344,14 @@ end
 
 function TB.OpenActiveOrders()
     if not (TB.HasOrderCapability and TB.HasOrderCapability()) then
-        if TB.Print then TB.Print("Orders are not available: the server has not announced order support yet. Try /tbm sync or /reload.") end
+        if TB.Print then TB.Print(L["Orders are not available: the server has not announced order support yet. Try /tbm sync or /reload."]) end
         return false
     end
     if not win then
         local ok, err = pcall(createWindow)
         if not ok then
             win = nil
-            if TB.Print then TB.Print("Active orders window failed: " .. tostring(err)) end
+            if TB.Print then TB.Print(string.format(L["Active orders window failed: %s"], tostring(err))) end
             return false
         end
     end

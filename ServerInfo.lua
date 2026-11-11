@@ -13,12 +13,25 @@
 -- An older server answers with an unknown-command line and the window says so.
 
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C or {}
 local COL = C.COLOR or {}
 local IW = 320
 local IROWS = 18
 
 local function color(name) return COL[name] or { 1, 1, 1 } end
+
+-- The server sends each switch's label and value in English. They are shown
+-- through TB.L; the list below names them so translators find the keys.
+-- A label the server adds later shows in English until it is translated.
+local _ = {
+    L["on"], L["off"],
+    L["Dungeon runs"], L["Player-led runs (I lead)"], L["Remote commander"],
+    L["Boss tactics for every bot"], L["Bot LFG groups"], L["Hiring"], L["Hires per player"],
+    L["Hires in battlegrounds"], L["Hire away from recruiters"], L["Hire gear start tier"],
+    L["World buffs from recruiters"], L["Autogear for every player"], L["Alt bots"],
+    L["Auction house market"], L["World bots (max)"], L["Run trace"],
+}
 
 -- features = { { key, value, label } } in the server's order.
 local features = {}
@@ -97,7 +110,7 @@ local function createWindow()
     local title = win:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -9)
     TB.StyleTitle(title, 14)
-    title:SetText("Server")
+    title:SetText(TB.L["Server"])
     TB.SetTextColor(title, color("title"))
     local close = CreateFrame("Button", nil, win, "UIPanelCloseButton")
     TB.StyleCloseButton(close, -7, -6)
@@ -107,13 +120,13 @@ local function createWindow()
     win.version:SetWidth(IW - 130); win.version:SetJustifyH("LEFT")
     TB.SetTextColor(win.version, color("muted"))
 
-    win.tabMain = tabButton("Main", 12, "main")
-    win.tabAll = tabButton("All settings", 94, "all")
+    win.tabMain = tabButton(TB.L["Main"], 12, "main")
+    win.tabAll = tabButton(TB.L["All settings"], 94, "all")
     win.tabAll:SetWidth(100)
 
     -- All: search box, Enter or Search asks the server.
     win.search = CreateFrame("EditBox", "TortoiseBotsManagerInfoSearch", win, "InputBoxTemplate")
-    TB.StyleEditBox(win.search, "Setting name")
+    TB.StyleEditBox(win.search, TB.L["Setting name"])
     win.search:SetWidth(IW - 112); win.search:SetHeight(20)
     win.search:SetPoint("TOPLEFT", win, "TOPLEFT", 18, -62)
     win.search:SetAutoFocus(false)
@@ -125,7 +138,7 @@ local function createWindow()
     win.searchButton = TB.StyleButton(CreateFrame("Button", nil, win, "UIPanelButtonTemplate"))
     win.searchButton:SetWidth(80); win.searchButton:SetHeight(20)
     win.searchButton:SetPoint("TOPLEFT", win, "TOPLEFT", IW - 92, -62)
-    win.searchButton:SetText("Search")
+    win.searchButton:SetText(TB.L["Search"])
     win.searchButton:SetScript("OnClick", function() TB.SearchServerConfig(win.search:GetText()) end)
 
     win.rows = {}
@@ -150,7 +163,7 @@ local function createWindow()
     win.refresh = TB.StyleButton(CreateFrame("Button", nil, win, "UIPanelButtonTemplate"))
     win.refresh:SetWidth(88); win.refresh:SetHeight(22)
     win.refresh:SetPoint("BOTTOMLEFT", win, "BOTTOMLEFT", 12, 10)
-    win.refresh:SetText("Refresh")
+    win.refresh:SetText(TB.L["Refresh"])
     win.refresh:SetScript("OnClick", function() TB.RequestServerFeatures() end)
     win.prev = TB.StyleButton(CreateFrame("Button", nil, win, "UIPanelButtonTemplate"))
     win.prev:SetWidth(26); win.prev:SetHeight(22)
@@ -206,7 +219,7 @@ local function renderMain()
     if table.getn(features) > 0 then
         win.empty:Hide()
     else
-        win.empty:SetText(pending and "Asking the server..." or "This server does not list its switches (an older module).")
+        win.empty:SetText(pending and TB.L["Asking the server..."] or TB.L["This server does not list its switches (an older module)."])
         win.empty:Show()
     end
 end
@@ -231,22 +244,22 @@ local function renderAll()
     if configPage > 1 then win.prev:Enable() else win.prev:Disable() end
     if configPage < pages then win.next:Enable() else win.next:Disable() end
     if configPending then
-        win.empty:SetText("Asking the server...")
+        win.empty:SetText(TB.L["Asking the server..."])
         win.empty:Show()
     elseif configQuery == "" then
-        win.empty:SetText("Type part of a setting name (e.g. hire, loot, dungeon), then Enter.")
+        win.empty:SetText(TB.L["Type part of a setting name (e.g. hire, loot, dungeon), then Enter."])
         win.empty:Show()
     elseif count == 0 then
-        win.empty:SetText("No setting matches '" .. configQuery .. "' (or an older server).")
+        win.empty:SetText(string.format(TB.L["No setting matches '%s' (or an older server)."], configQuery))
         win.empty:Show()
     else
         win.empty:Hide()
     end
     if configQuery ~= "" and not configPending then
         if configTotal > count then
-            win.count:SetText(count .. " of " .. configTotal .. " shown: narrow the search")
+            win.count:SetText(string.format(TB.L["%s of %s shown: narrow the search"], tostring(count), tostring(configTotal)))
         else
-            win.count:SetText(configTotal .. " settings")
+            win.count:SetText(string.format(TB.L["%s settings"], tostring(configTotal)))
         end
     else
         win.count:SetText("")
@@ -256,8 +269,8 @@ end
 function TB.RefreshServerInfo()
     if not win or not win:IsVisible() then return end
     -- Semantic versions read vX.Y.Z; an older dated build id shows as sent.
-    win.version:SetText("TortoiseBots module " .. tostring((TB.FormatSemver and TB.FormatSemver(TB.serverVersion))
-        or TB.serverVersion or "not reported"))
+    win.version:SetText(string.format(TB.L["TortoiseBots module %s"], tostring((TB.FormatSemver and TB.FormatSemver(TB.serverVersion))
+        or TB.serverVersion or TB.L["not reported"])))
     local main = tab == "main"
     TB.SetButtonActive(win.tabMain, main)
     TB.SetButtonActive(win.tabAll, not main)

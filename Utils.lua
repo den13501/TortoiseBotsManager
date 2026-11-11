@@ -1,5 +1,6 @@
 -- TortoiseBotsManager/Utils.lua — pure, testable helpers. No frame creation.
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C
 
 -- strings
@@ -519,30 +520,30 @@ end
 
 function TB.StatusText(st, inGroup)
     local S = C.STATUS
-    if not st then return "Offline" end
-    if st.operation and st.operation.verb == "status" then return "Checking…" end
-    if st.status == S.FAILED then return "Failed" end
-    if st.status == S.UNKNOWN then return "Unknown" end
-    if st.status == S.QUEUED then return "Queued" end
-    if st.status == S.SUMMONING then return "Summoning…" end
-    if st.status == S.INVITING then return "Inviting…" end
-    if st.status == S.KICKING then return "Kicking…" end
-    if st.status == S.REMOVING then return "Removing…" end
-    if st.status == S.COMMANDING then return "Working…" end
+    if not st then return L["Offline"] end
+    if st.operation and st.operation.verb == "status" then return L["Checking…"] end
+    if st.status == S.FAILED then return L["Failed"] end
+    if st.status == S.UNKNOWN then return L["Unknown"] end
+    if st.status == S.QUEUED then return L["Queued"] end
+    if st.status == S.SUMMONING then return L["Summoning…"] end
+    if st.status == S.INVITING then return L["Inviting…"] end
+    if st.status == S.KICKING then return L["Kicking…"] end
+    if st.status == S.REMOVING then return L["Removing…"] end
+    if st.status == S.COMMANDING then return L["Working…"] end
     if not st or not st.online then
-        if st and st.status == S.STARTING  then return "Starting" end
-        if st and st.status == S.OFFLINE_PENDING then return "Checking…" end
-        return "Offline"
+        if st and st.status == S.STARTING  then return L["Starting"] end
+        if st and st.status == S.OFFLINE_PENDING then return L["Checking…"] end
+        return L["Offline"]
     end
-    if st.enteredWorld == false then return "Starting" end
-    if st.altBot then return "Alt-bot · Playing alone" end
+    if st.enteredWorld == false then return L["Starting"] end
+    if st.altBot then return L["Alt-bot"] .. " · " .. L["Playing alone"] end
     if st.movement and st.movement ~= "" and st.movement ~= "custom" then
         local movement = string.gsub(st.movement, "^%l", string.upper)
-        if inGroup then return "Online · Group · " .. movement end
-        return "Online · " .. movement
+        if inGroup then return L["Online"] .. " · " .. L["Group"] .. " · " .. L[movement] end
+        return L["Online"] .. " · " .. L[movement]
     end
-    if inGroup then return "Online · Group" end
-    return "Online"
+    if inGroup then return L["Online"] .. " · " .. L["Group"] end
+    return L["Online"]
 end
 
 function TB.GetClassColor(classId)
@@ -570,35 +571,35 @@ end
 
 function TB.StatusBadge(st, inGroup)
     local S = C.STATUS
-    if not st then return "|cff757575○ Offline|r" end
-    if st.operation and st.operation.verb == "status" then return "|cffffb300● Checking…|r" end
-    if st.status == S.FAILED then return "|cffff5555● Failed|r" end
-    if st.status == S.UNKNOWN then return "|cffff5555● Unknown|r" end
-    if st.status == S.QUEUED then return "|cffffb300● Queued|r" end
-    if st.status == S.SUMMONING then return "|cffffb300● Summoning…|r" end
-    if st.status == S.INVITING then return "|cffffb300● Inviting…|r" end
-    if st.status == S.KICKING then return "|cffffb300● Kicking…|r" end
-    if st.status == S.REMOVING then return "|cffffb300● Removing…|r" end
-    if st.status == S.COMMANDING then return "|cffffb300● Working…|r" end
+    if not st then return "|cff757575○ " .. L["Offline"] .. "|r" end
+    if st.operation and st.operation.verb == "status" then return "|cffffb300● " .. L["Checking…"] .. "|r" end
+    if st.status == S.FAILED then return "|cffff5555● " .. L["Failed"] .. "|r" end
+    if st.status == S.UNKNOWN then return "|cffff5555● " .. L["Unknown"] .. "|r" end
+    if st.status == S.QUEUED then return "|cffffb300● " .. L["Queued"] .. "|r" end
+    if st.status == S.SUMMONING then return "|cffffb300● " .. L["Summoning…"] .. "|r" end
+    if st.status == S.INVITING then return "|cffffb300● " .. L["Inviting…"] .. "|r" end
+    if st.status == S.KICKING then return "|cffffb300● " .. L["Kicking…"] .. "|r" end
+    if st.status == S.REMOVING then return "|cffffb300● " .. L["Removing…"] .. "|r" end
+    if st.status == S.COMMANDING then return "|cffffb300● " .. L["Working…"] .. "|r" end
     if not st.online then
-        if st.status == S.STARTING then return "|cffffb300● Starting|r" end
-        if st.status == S.OFFLINE_PENDING then return "|cffffb300● Checking…|r" end
-        return "|cff757575○ Offline|r"
+        if st.status == S.STARTING then return "|cffffb300● " .. L["Starting"] .. "|r" end
+        if st.status == S.OFFLINE_PENDING then return "|cffffb300● " .. L["Checking…"] .. "|r" end
+        return "|cff757575○ " .. L["Offline"] .. "|r"
     end
-    if st.enteredWorld == false then return "|cffffb300● Starting|r" end
-    if st.altBot then return "|cffb388ff● Alt-bot|r · Playing alone" end
+    if st.enteredWorld == false then return "|cffffb300● " .. L["Starting"] .. "|r" end
+    if st.altBot then return "|cffb388ff● " .. L["Alt-bot"] .. "|r · " .. L["Playing alone"] end
     if inGroup then
         if st.movement and st.movement ~= "" and st.movement ~= "custom" then
             local mv = string.gsub(st.movement, "^%l", string.upper)
-            return "|cff42a5f5● Group|r · " .. mv
+            return "|cff42a5f5● " .. L["Group"] .. "|r · " .. L[mv]
         end
-        return "|cff42a5f5● Group|r"
+        return "|cff42a5f5● " .. L["Group"] .. "|r"
     end
     if st.movement and st.movement ~= "" and st.movement ~= "custom" then
         local mv = string.gsub(st.movement, "^%l", string.upper)
-        return "|cff4ecb5a● Online|r · " .. mv
+        return "|cff4ecb5a● " .. L["Online"] .. "|r · " .. L[mv]
     end
-    return "|cff4ecb5a● Online|r"
+    return "|cff4ecb5a● " .. L["Online"] .. "|r"
 end
 
 -- table
@@ -611,51 +612,51 @@ TB.Roles = {}
 
 TB.Roles.CLASS_ROLES = {
     [1] = { -- Warrior
-        { id = "tank", label = "Protection", strat = "+protection,-arms,-fury" },
-        { id = "dps", label = "Arms", strat = "+arms,-protection,-fury" },
-        { id = "fury", label = "Fury", strat = "+fury,-protection,-arms" },
+        { id = "tank", label = L["Protection"], strat = "+protection,-arms,-fury" },
+        { id = "dps", label = L["Arms"], strat = "+arms,-protection,-fury" },
+        { id = "fury", label = L["Fury"], strat = "+fury,-protection,-arms" },
     },
     [2] = { -- Paladin
-        { id = "tank", label = "Protection", strat = "+protection,-holy,-retribution" },
-        { id = "heal", label = "Holy", strat = "+holy,-protection,-retribution" },
-        { id = "dps", label = "Retribution", strat = "+retribution,-protection,-holy" },
+        { id = "tank", label = L["Protection"], strat = "+protection,-holy,-retribution" },
+        { id = "heal", label = L["Holy"], strat = "+holy,-protection,-retribution" },
+        { id = "dps", label = L["Retribution"], strat = "+retribution,-protection,-holy" },
     },
     [3] = { -- Hunter
-        { id = "bm", label = "Beastmaster", strat = "+beast mastery,-marksmanship,-survival" },
-        { id = "mm", label = "Marksman", strat = "+marksmanship,-beast mastery,-survival" },
-        { id = "survival", label = "Survival", strat = "+survival,-beast mastery,-marksmanship" },
+        { id = "bm", label = L["Beastmaster"], strat = "+beast mastery,-marksmanship,-survival" },
+        { id = "mm", label = L["Marksman"], strat = "+marksmanship,-beast mastery,-survival" },
+        { id = "survival", label = L["Survival"], strat = "+survival,-beast mastery,-marksmanship" },
     },
     [4] = { -- Rogue
-        { id = "combat", label = "Combat", strat = "+combat,-assassination,-subtlety" },
-        { id = "assa", label = "Assassination", strat = "+assassination,-combat,-subtlety" },
-        { id = "subtlety", label = "Subtlety", strat = "+subtlety,-combat,-assassination" },
+        { id = "combat", label = L["Combat"], strat = "+combat,-assassination,-subtlety" },
+        { id = "assa", label = L["Assassination"], strat = "+assassination,-combat,-subtlety" },
+        { id = "subtlety", label = L["Subtlety"], strat = "+subtlety,-combat,-assassination" },
     },
     [5] = { -- Priest
-        { id = "heal", label = "Holy", strat = "+holy,-discipline,-shadow" },
-        { id = "disc", label = "Discipline", strat = "+discipline,-holy,-shadow" },
-        { id = "dps", label = "Shadow", strat = "+shadow,-holy,-discipline,-offdps" },
+        { id = "heal", label = L["Holy"], strat = "+holy,-discipline,-shadow" },
+        { id = "disc", label = L["Discipline"], strat = "+discipline,-holy,-shadow" },
+        { id = "dps", label = L["Shadow"], strat = "+shadow,-holy,-discipline,-offdps" },
     },
     [7] = { -- Shaman
-        { id = "heal", label = "Restoration", strat = "+restoration,-elemental,-enhancement" },
-        { id = "ele", label = "Elemental", strat = "+elemental,-restoration,-enhancement" },
-        { id = "enh", label = "Enhancement", strat = "+enhancement,-restoration,-elemental" },
-        { id = "tank", label = "Enh Tank", strat = "+tank shaman,-restoration,-elemental,-enhancement" },
+        { id = "heal", label = L["Restoration"], strat = "+restoration,-elemental,-enhancement" },
+        { id = "ele", label = L["Elemental"], strat = "+elemental,-restoration,-enhancement" },
+        { id = "enh", label = L["Enhancement"], strat = "+enhancement,-restoration,-elemental" },
+        { id = "tank", label = L["Enh Tank"], strat = "+tank shaman,-restoration,-elemental,-enhancement" },
     },
     [8] = { -- Mage
-        { id = "frost", label = "Frost", strat = "+frost,-fire,-arcane" },
-        { id = "fire", label = "Fire", strat = "+fire,-frost,-arcane" },
-        { id = "arcane", label = "Arcane", strat = "+arcane,-frost,-fire" },
+        { id = "frost", label = L["Frost"], strat = "+frost,-fire,-arcane" },
+        { id = "fire", label = L["Fire"], strat = "+fire,-frost,-arcane" },
+        { id = "arcane", label = L["Arcane"], strat = "+arcane,-frost,-fire" },
     },
     [9] = { -- Warlock
-        { id = "affliction", label = "Affliction", strat = "+affliction,-demonology,-destruction" },
-        { id = "demonology", label = "Demonology", strat = "+demonology,-affliction,-destruction" },
-        { id = "destruction", label = "Destruction", strat = "+destruction,-affliction,-demonology" },
+        { id = "affliction", label = L["Affliction"], strat = "+affliction,-demonology,-destruction" },
+        { id = "demonology", label = L["Demonology"], strat = "+demonology,-affliction,-destruction" },
+        { id = "destruction", label = L["Destruction"], strat = "+destruction,-affliction,-demonology" },
     },
     [11] = { -- Druid
-        { id = "tank", label = "Feral Bear", strat = "+tank feral,-dps feral,-restoration,-balance" },
-        { id = "cat", label = "Feral Cat", strat = "+dps feral,-tank feral,-restoration,-balance" },
-        { id = "heal", label = "Restoration", strat = "+restoration,-tank feral,-dps feral,-balance" },
-        { id = "boomkin", label = "Balance", strat = "+balance,-tank feral,-dps feral,-restoration" },
+        { id = "tank", label = L["Feral Bear"], strat = "+tank feral,-dps feral,-restoration,-balance" },
+        { id = "cat", label = L["Feral Cat"], strat = "+dps feral,-tank feral,-restoration,-balance" },
+        { id = "heal", label = L["Restoration"], strat = "+restoration,-tank feral,-dps feral,-balance" },
+        { id = "boomkin", label = L["Balance"], strat = "+balance,-tank feral,-dps feral,-restoration" },
     },
 }
 
@@ -734,9 +735,9 @@ end
 
 -- The player's spec is theirs; bots only need to know which role they fill.
 TB.Roles.PLAYER_ROLES = {
-    { id = "tank", label = "Tank" },
-    { id = "heal", label = "Healer" },
-    { id = "dps", label = "DPS" },
+    { id = "tank", label = L["Tank"] },
+    { id = "heal", label = L["Healer"] },
+    { id = "dps", label = L["DPS"] },
 }
 
 local function findPlayerRole(roleId)
@@ -780,7 +781,31 @@ local SHORT_ROLE_LABELS = {
     ["Feral Bear"] = "Bear",
     ["Feral Cat"] = "Cat",
 }
+-- Role labels stay English in the tables: FindRole matches them and the
+-- server strategies use them. Only the shown text is translated, and a
+-- translated label is short enough to skip the English abbreviation.
+local ROLE_TEXT = {
+    ["Tank"] = L["Tank"], ["Healer"] = L["Healer"], ["DPS"] = L["DPS"],
+    ["Protection"] = L["Protection"], ["Arms"] = L["Arms"], ["Fury"] = L["Fury"],
+    ["Holy"] = L["Holy"], ["Retribution"] = L["Retribution"],
+    ["Beastmaster"] = L["Beastmaster"], ["Marksman"] = L["Marksman"], ["Survival"] = L["Survival"],
+    ["Combat"] = L["Combat"], ["Assassination"] = L["Assassination"], ["Subtlety"] = L["Subtlety"],
+    ["Discipline"] = L["Discipline"], ["Shadow"] = L["Shadow"],
+    ["Restoration"] = L["Restoration"], ["Elemental"] = L["Elemental"],
+    ["Enhancement"] = L["Enhancement"], ["Enh Tank"] = L["Enh Tank"],
+    ["Frost"] = L["Frost"], ["Fire"] = L["Fire"], ["Arcane"] = L["Arcane"],
+    ["Affliction"] = L["Affliction"], ["Demonology"] = L["Demonology"], ["Destruction"] = L["Destruction"],
+    ["Feral Bear"] = L["Feral Bear"], ["Feral Cat"] = L["Feral Cat"], ["Balance"] = L["Balance"],
+    ["Default"] = L["Default"], ["Role"] = L["Role"],
+}
+
+function TB.Roles.DisplayLabel(label)
+    return ROLE_TEXT[label] or label
+end
+
 function TB.Roles.ShortLabel(label)
+    local text = ROLE_TEXT[label]
+    if text and text ~= label then return text end
     return SHORT_ROLE_LABELS[label] or label
 end
 
@@ -797,7 +822,7 @@ function TB.Roles.SetPlayerRole(role)
     TortoiseBotsDB.playerRole = roleDef.id
     local token = TB.Roles.GetPlayerRoleToken(roleDef.id)
     TB.SendBotCommand("role self " .. token)
-    if TB.Print then TB.Print("Your role set to " .. roleDef.label) end
+    if TB.Print then TB.Print(string.format(L["Your role set to %s"], TB.Roles.DisplayLabel(roleDef.label))) end
     return true
 end
 
@@ -823,7 +848,7 @@ function TB.Roles.SetBotRole(botName, role, classId)
             TB.SendBotCommand("strategy " .. roleDef.strat .. " " .. botName)
         end
     end
-    if TB.Print then TB.Print(botName .. " role set to " .. roleDef.label) end
+    if TB.Print then TB.Print(string.format(L["%s role set to %s"], botName, TB.Roles.DisplayLabel(roleDef.label))) end
     return true
 end
 

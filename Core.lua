@@ -10,6 +10,7 @@
 
 TortoiseBots = TortoiseBots or {}
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C or {} -- from Constants.lua (defensive fallback)
 
 TB.version = (C and C.VERSION) or TB.version or "0.1.0"
@@ -25,33 +26,42 @@ function TB.FormatSemver(version)
     return nil
 end
 
+-- Window title: the coloured English brand, or the client language's name
+-- for the addon when a translation gives one.
+function TB.BrandTitle()
+    if TB.HasTranslation and TB.HasTranslation("TortoiseBots Manager") then
+        return "|cffd8a657" .. TB.L["TortoiseBots Manager"] .. "|r"
+    end
+    return "|cffd8a657Tortoise|r|cff4ecb5aBots|r |cfffff2ccManager|r"
+end
+
 -- Header: the addon version once, in the title; the line under it carries
 -- the credit and, when the server module reports a semantic version, that.
 function TB.RefreshVersionLine()
     local addonVersion = TB.version or "?"
     local moduleVersion = TB.FormatSemver(TB.serverVersion)
-    local text = "by " .. (TB.C.AUTHOR or "Sagiroth")
+    local text = string.format(L["by %s"], TB.C.AUTHOR or "Sagiroth")
     if moduleVersion then
-        text = text .. "  ·  server module " .. moduleVersion
+        text = text .. "  ·  " .. string.format(L["server module %s"], moduleVersion)
     elseif TB.serverVersion then
-        text = text .. "  ·  server module connected"
+        text = text .. "  ·  " .. L["server module connected"]
     end
     local problem = TB.CompatProblem()
     if problem == "addon" then
-        text = text .. "  ·  |cffff9933addon outdated|r"
+        text = text .. "  ·  |cffff9933" .. L["addon outdated"] .. "|r"
     elseif problem == "module" then
-        text = text .. "  ·  |cffff9933server module outdated|r"
+        text = text .. "  ·  |cffff9933" .. L["server module outdated"] .. "|r"
     elseif TB.IsNewerVersion(TB.latestAddon, TB.version) then
-        text = text .. "  ·  |cffff9933addon update v" .. TB.latestAddon .. "|r"
+        text = text .. "  ·  |cffff9933" .. string.format(L["addon update v%s"], TB.latestAddon) .. "|r"
     end
     if TB.IsNewerVersion(TB.latestModule, TB.serverVersion) then
-        text = text .. "  ·  |cffff9933bots update v" .. TB.latestModule .. "|r"
+        text = text .. "  ·  |cffff9933" .. string.format(L["bots update v%s"], TB.latestModule) .. "|r"
     end
     if TB.versionLine and TB.versionLine.SetText then
         TB.versionLine:SetText(text)
     end
     if TB.versionTitle and TB.versionTitle.SetText then
-        TB.versionTitle:SetText("|cffd8a657Tortoise|r|cff4ecb5aBots|r |cfffff2ccManager|r  |cff8c8270v"
+        TB.versionTitle:SetText(TB.BrandTitle() .. "  |cff8c8270v"
             .. tostring(addonVersion) .. "|r")
     end
 end
@@ -92,20 +102,20 @@ function TB.CheckCompat()
     TB._compatShown = true
     local text
     if problem == "addon" then
-        text = "TortoiseBotsManager v" .. tostring(TB.version) .. " is too old for the bots on this server (module "
-            .. moduleText .. ").\n\nPlease update the addon:\n" .. ((C and C.SOURCE_URL) or "")
+        text = string.format(L["TortoiseBotsManager v%s is too old for the bots on this server (module %s).\n\nPlease update the addon:\n%s"],
+            tostring(TB.version), moduleText, (C and C.SOURCE_URL) or "")
     elseif problem == "update" then
-        text = "A newer TortoiseBotsManager is available: v" .. TB.latestAddon .. " (you have v"
-            .. tostring(TB.version) .. ").\n\n" .. ((C and C.SOURCE_URL) or "")
+        text = string.format(L["A newer TortoiseBotsManager is available: v%s (you have v%s).\n\n%s"],
+            TB.latestAddon, tostring(TB.version), (C and C.SOURCE_URL) or "")
     else
-        text = "The bots on this server (module " .. moduleText .. ") are too old for TortoiseBotsManager v"
-            .. tostring(TB.version) .. ".\n\nPlease update TortoiseBots on the server."
+        text = string.format(L["The bots on this server (module %s) are too old for TortoiseBotsManager v%s.\n\nPlease update TortoiseBots on the server."],
+            moduleText, tostring(TB.version))
     end
     if StaticPopupDialogs and StaticPopup_Show then
         StaticPopupDialogs["TORTOISEBOTSMANAGER_COMPAT"] = {
             text = text,
-            button1 = "Don't show again",
-            button2 = "OK",
+            button1 = L["Don't show again"],
+            button2 = L["OK"],
             OnAccept = function()
                 if TortoiseBotsDB then TortoiseBotsDB.compatDismissed = key end
             end,
@@ -168,47 +178,59 @@ local function parseBotLifecycleMessage(message)
     if not message or type(message) ~= "string" then return nil end
     local _, _, b, m = string.find(message, "^Bot%s+(%S+)%s+queued for login;%s*it will follow%s+(%S+)%s+after entering the world%.?")
     if b and m then
-        return b .. " queued for login (following " .. m .. ")"
+        return string.format(L["%s queued for login (following %s)"], b, m)
     end
     local _, _, b2 = string.find(message, "^Bot%s+(%S+)%s+logout requested;%s*durable ownership was retained%.?")
     if b2 then
-        return b2 .. " logout requested"
+        return string.format(L["%s logout requested"], b2)
+    end
+    local _, _, bi = string.find(message, "^Invitation sent to bot%s+(%S+);%s*it joined your group%.?")
+    if bi then
+        return string.format(L["%s joined your group"], bi)
+    end
+    local _, _, bia = string.find(message, "^Invitation sent to bot%s+(%S+);%s*it may accept it asynchronously%.?")
+    if bia then
+        return string.format(L["Invitation sent to %s"], bia)
+    end
+    local _, _, bu = string.find(message, "^Uninvite sent for bot%s+(%S+)%.?$")
+    if bu then
+        return string.format(L["%s removed from your group"], bu)
     end
     local _, _, b3 = string.find(message, "^Summoning%s+(%S+)%s+to a safe position near you %(3s%);%s*it will follow on arrival%.?")
     if b3 then
-        return "Summoning " .. b3 .. " to your position (3s)"
+        return string.format(L["Summoning %s to your position (3s)"], b3)
     end
     local _, _, t = string.find(message, "^Pullback requested:%s*tank%s+(%S+)%s+is using its native pull strategy%.?")
     if t then
-        return "Pullback requested for tank " .. t
+        return string.format(L["Pullback requested for tank %s"], t)
     end
     local _, _, bo = string.find(message, "^Character%s+'([^']+)'%s+is already online")
     if bo then
-        return "Character '" .. bo .. "' is already online"
+        return string.format(L["Character '%s' is already online"], bo)
     end
     local _, _, bow = string.find(message, "^Character%s+'([^']+)'%s+is already owned")
     if bow then
-        return "Character '" .. bow .. "' is already owned"
+        return string.format(L["Character '%s' is already owned"], bow)
     end
     local _, _, f = string.find(message, "^Failed to add bot%s+(%S+)")
     if f then
-        return "Failed to add bot " .. f
+        return string.format(L["Failed to add bot %s"], f)
     end
     local _, _, fs = string.find(message, "^Failed to summon bot%s+'([^']+)'")
     if fs then
-        return "Failed to summon bot '" .. fs .. "'"
+        return string.format(L["Failed to summon bot '%s'"], fs)
     end
     local _, _, bnf = string.find(message, "^Bot%s+'([^']+)'%s+not found or not online")
     if bnf then
-        return "Bot '" .. bnf .. "' not found or not online"
+        return string.format(L["Bot '%s' not found or not online"], bnf)
     end
     local _, _, bd = string.find(message, "^Bot%s+'([^']+)'%s+is dead")
     if bd then
-        return "Bot '" .. bd .. "' is dead"
+        return string.format(L["Bot '%s' is dead"], bd)
     end
     local _, _, bc = string.find(message, "^Bot%s+'([^']+)'%s+is in combat")
     if bc then
-        return "Bot '" .. bc .. "' is in combat"
+        return string.format(L["Bot '%s' is in combat"], bc)
     end
     return nil
 end
@@ -407,7 +429,8 @@ local function finishRosterBatch(batch)
     if TB.SetStatus then
         local kind = failed > 0 and "warn" or "ok"
         local outcome = batch.verb == "invite" and "joined" or "acknowledged"
-        TB.SetStatus(batch.verb .. " complete · " .. completed .. "/" .. total .. " " .. outcome, kind)
+        TB.SetStatus(string.format(outcome == "joined" and L["%s complete · %s/%s joined"] or L["%s complete · %s/%s acknowledged"],
+            batch.verb, completed, total), kind)
     end
     local nextBatch = table.remove(rosterBatchQueue, 1)
     if nextBatch then startRosterBatch(nextBatch) end
@@ -438,7 +461,7 @@ local function rosterBatchTimeout()
         batch.sentAt = nil
         if TB.AcknowledgeOperation then TB.AcknowledgeOperation(name, batch.verb) end
         if TB.BeginOperation then TB.BeginOperation(name, batch.verb, true) end
-        if TB.SetStatus then TB.SetStatus("Retrying " .. batch.verb .. " for " .. name .. "…", "pending") end
+        if TB.SetStatus then TB.SetStatus(string.format(L["Retrying %s for %s…"], batch.verb, name), "pending") end
         TB.SendBotCommand(batch.command, { rosterBatch = true })
     else
         if TB.CompleteOperation then
@@ -503,7 +526,7 @@ function TB.QueueRosterBatch(verb, names)
     if table.getn(clean) == 0 then return false end
     -- Clicking Summon Party again while one runs would summon everyone twice.
     if verb == "summon" and TB.IsRosterBatchActive("summon") then
-        if TB.SetStatus then TB.SetStatus("Summon already running.", "muted") end
+        if TB.SetStatus then TB.SetStatus(L["Summon already running."], "muted") end
         return false
     end
 
@@ -513,7 +536,7 @@ function TB.QueueRosterBatch(verb, names)
     if not activeRosterBatch then
         startRosterBatch(table.remove(rosterBatchQueue, 1))
     elseif TB.SetStatus then
-        TB.SetStatus(verb .. " queued · " .. table.getn(clean) .. " bots", "pending")
+        TB.SetStatus(string.format(L["%s queued · %s bots"], verb, table.getn(clean)), "pending")
     end
     return true
 end
@@ -665,7 +688,7 @@ function TB.SendQuestOrders(order)
     if order ~= "accept" and order ~= "share" then return false end
     local names = TB.GetGroupedBotNames and TB.GetGroupedBotNames() or {}
     if table.getn(names) == 0 then
-        if TB.SetStatus then TB.SetStatus("No grouped bots to " .. order .. ".", "muted") end
+        if TB.SetStatus then TB.SetStatus(string.format(L["No grouped bots to %s."], order), "muted") end
         return false
     end
     for _, name in ipairs(names) do
@@ -811,16 +834,16 @@ SlashCmdList["TORTOISEBOTSMANAGER"] = function(msg)
     if bagsName then
         -- "/tbm bags <name>", or the targeted bot when no name is given.
         local name = bagsName ~= "" and bagsName or (UnitName and UnitName("target")) or nil
-        if name and TB.OpenBotPanel then TB.OpenBotPanel(name) else TB.Print("Usage: /tbm bags <bot name> (or target the bot)") end
+        if name and TB.OpenBotPanel then TB.OpenBotPanel(name) else TB.Print(L["Usage: /tbm bags <bot name> (or target the bot)"]) end
         return
     end
     if msg == "help" or msg == "h" then
-        TB.Print("Commands: /tbm — toggle, /tbm party — show party, /tbm bags [name] — bot gear & bags, /tbm mini | full — small fight bar or full window, /tbm minilayout [horizontal|vertical] — mini bar direction, /tbm settings — window options, /tbm trace — show what is sent and received, /tbm log — show log, /tbm list — poll, /tbm resetpos — center, /tbm help — this")
+        TB.Print(L["Commands: /tbm — toggle, /tbm party — show party, /tbm bags [name] — bot gear & bags, /tbm mini | full — small fight bar or full window, /tbm minilayout [horizontal|vertical] — mini bar direction, /tbm settings — window options, /tbm trace — show what is sent and received, /tbm log — show log, /tbm list — poll, /tbm resetpos — center, /tbm help — this"])
         TB.Print("TortoiseBots by " .. TB.C.AUTHOR .. " — " .. TB.C.SOURCE_URL)
         return
     elseif msg == "trace" then
         TB.trace = not TB.trace
-        TB.Print("Trace " .. (TB.trace and "on: every command sent (>) and server line received (<) shows in chat" or "off"))
+        TB.Print(TB.trace and L["Trace on: every command sent (>) and server line received (<) shows in chat"] or L["Trace off"])
         return
     elseif msg == "mini" or msg == "full" then
         TB.RequestMode(msg)
@@ -831,7 +854,7 @@ SlashCmdList["TORTOISEBOTSMANAGER"] = function(msg)
             if want == "horizontal" or want == "vertical" then TB.SetMiniLayout(want)
             else TB.ToggleMiniLayout() end
         else
-            TB.Print("Mini bar layout is not loaded yet. Exit and restart the game client: WoW only loads new addon files on a full restart, not on /reload.")
+            TB.Print(L["Mini bar layout is not loaded yet. Exit and restart the game client: WoW only loads new addon files on a full restart, not on /reload."])
         end
         return
     elseif msg == "party" then
@@ -843,10 +866,10 @@ SlashCmdList["TORTOISEBOTSMANAGER"] = function(msg)
         if TB.ShowTab then TB.ShowTab("log") end
         return
     elseif msg == "settings" or msg == "options" or msg == "config" then
-        if TB.ToggleSettings then TB.ToggleSettings() else TB.Print("UI not loaded yet.") end
+        if TB.ToggleSettings then TB.ToggleSettings() else TB.Print(L["UI not loaded yet."]) end
         return
     elseif msg == "list" then
-        TB.PollList(true); TB.Print("Polling server roster…"); return
+        TB.PollList(true); TB.Print(L["Polling server roster…"]); return
     elseif msg == "resetpos" then
         TortoiseBotsDB.frame = { point = "CENTER", rpoint = "CENTER", x = 0, y = 15 }
         if TB.frame then TB.frame:ClearAllPoints(); TB.frame:SetPoint("CENTER", UIParent, "CENTER", 0, 15) end
@@ -855,13 +878,15 @@ SlashCmdList["TORTOISEBOTSMANAGER"] = function(msg)
             TB.miniBar:ClearAllPoints()
             TB.miniBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 160)
         end
-        TB.Print("Position reset."); return
+        TB.Print(L["Position reset."]); return
     end
-    if TB.Toggle then TB.Toggle() else TB.Print("UI not loaded yet.") end
+    if TB.Toggle then TB.Toggle() else TB.Print(L["UI not loaded yet."]) end
 end
 
 function TB.Print(msg)
-    if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("|cffd8a657TortoiseBots Manager:|r " .. tostring(msg)) end
+    if DEFAULT_CHAT_FRAME then
+        DEFAULT_CHAT_FRAME:AddMessage("|cffd8a657" .. L["TortoiseBots Manager"] .. ":|r " .. tostring(msg))
+    end
 end
 
 -- Mini mode lives in MiniBar.lua. The 1.12 client loads a file that is new
@@ -873,7 +898,7 @@ function TB.RequestMode(mode)
         TB.SetMode(mode)
         return
     end
-    TB.Print("Mini mode is not loaded yet. Exit and restart the game client: WoW only loads new addon files on a full restart, not on /reload.")
+    TB.Print(L["Mini mode is not loaded yet. Exit and restart the game client: WoW only loads new addon files on a full restart, not on /reload."])
 end
 
 -- ── Lifecycle ────────────────────────────────────────────────────────────────
@@ -889,7 +914,7 @@ ef:SetScript("OnEvent", function()
         if TB.InitComms   then TB.InitComms()   end
         if TB.InitUI      then TB.InitUI()      end
         if TB.InitMinimap then TB.InitMinimap() end
-        TB.Print("v" .. TB.version .. " loaded by " .. TB.C.AUTHOR .. ". /tbm to open. Requires TortoiseBots module on server.")
+        TB.Print(string.format(L["v%s loaded by %s. /tbm to open. Requires TortoiseBots module on server."], TB.version, TB.C.AUTHOR))
     elseif event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_LOGIN" then
         installBotCommandChatFilter()
         if TB.RequestServerCapabilities then TB.RequestServerCapabilities() end

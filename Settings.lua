@@ -4,6 +4,7 @@
 -- and the roster poll switch and interval the auto-poller already reads.
 
 local TB = TortoiseBots
+local L = TB.L
 local C = TB.C or {}
 local COL = C.COLOR or {}
 local SW = 280
@@ -82,7 +83,7 @@ local function scaleText()
     local db = TortoiseBotsDB or {}
     local pct = math.floor(TB.GetWindowScale() * 100 + 0.5) .. "%"
     if type(db.windowScale) == "number" then return pct end
-    return "Auto (" .. pct .. ")"
+    return string.format(L["Auto (%s)"], pct)
 end
 
 local function checkRow(y, name, label)
@@ -122,7 +123,7 @@ local function createWindow()
     local title = win:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -9)
     TB.StyleTitle(title, 14)
-    title:SetText("Settings")
+    title:SetText(L["Settings"])
     TB.SetTextColor(title, color("title"))
     local close = CreateFrame("Button", nil, win, "UIPanelCloseButton")
     TB.StyleCloseButton(close, -7, -6)
@@ -131,12 +132,12 @@ local function createWindow()
     local scaleLabel = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     scaleLabel:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -36)
     scaleLabel:SetWidth(110); scaleLabel:SetJustifyH("LEFT")
-    scaleLabel:SetText("Window size")
+    scaleLabel:SetText(L["Window size"])
     TB.SetTextColor(scaleLabel, color("text"))
     local auto = TB.StyleButton(CreateFrame("Button", nil, win, "UIPanelButtonTemplate"), "mode")
     auto:SetWidth(46); auto:SetHeight(18)
     auto:SetPoint("TOPRIGHT", win, "TOPRIGHT", -12, -36)
-    auto:SetText("Auto")
+    auto:SetText(L["Auto"])
     auto:SetScript("OnClick", function() TB.SetWindowScale(nil) end)
     win.scaleValue = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     win.scaleValue:SetPoint("RIGHT", auto, "LEFT", -6, 0)
@@ -166,19 +167,19 @@ local function createWindow()
     end)
     win.slider = slider
 
-    win.minimapCheck = checkRow(-88, "TortoiseBotsManagerSettingsMinimap", "Minimap button")
+    win.minimapCheck = checkRow(-88, "TortoiseBotsManagerSettingsMinimap", L["Minimap button"])
     win.minimapCheck:SetScript("OnClick", function()
         TB.SetMinimapShown(this:GetChecked() and true or false)
     end)
-    win.lockCheck = checkRow(-114, "TortoiseBotsManagerSettingsLock", "Lock mini bar")
+    win.lockCheck = checkRow(-114, "TortoiseBotsManagerSettingsLock", L["Lock mini bar"])
     win.lockCheck:SetScript("OnClick", function()
         TB.SetMiniLocked(this:GetChecked() and true or false)
     end)
-    win.verticalCheck = checkRow(-140, "TortoiseBotsManagerSettingsVertical", "Vertical mini bar")
+    win.verticalCheck = checkRow(-140, "TortoiseBotsManagerSettingsVertical", L["Vertical mini bar"])
     win.verticalCheck:SetScript("OnClick", function()
         TB.SetMiniLayout(this:GetChecked() and "vertical" or "horizontal")
     end)
-    win.pollCheck = checkRow(-166, "TortoiseBotsManagerSettingsPoll", "Auto refresh roster")
+    win.pollCheck = checkRow(-166, "TortoiseBotsManagerSettingsPoll", L["Auto refresh roster"])
     win.pollCheck:SetScript("OnClick", function()
         TB.SetAutoPoll(this:GetChecked() and true or false)
     end)
@@ -186,7 +187,7 @@ local function createWindow()
     local pollLabel = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     pollLabel:SetPoint("TOPLEFT", win, "TOPLEFT", 36, -192)
     pollLabel:SetWidth(90); pollLabel:SetJustifyH("LEFT")
-    pollLabel:SetText("Refresh every")
+    pollLabel:SetText(L["Refresh every"])
     TB.SetTextColor(pollLabel, color("text"))
     win.pollStepper = TB.UI.CreateStepper(win, {
         point = "LEFT", relTo = pollLabel, relPoint = "RIGHT", x = 8, y = 0,

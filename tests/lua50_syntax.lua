@@ -148,7 +148,7 @@ local toc = root .. "/TortoiseBotsManager.toc"
 local files = toc_files(toc)
 local problems, scanned = {}, 0
 for _, rel in ipairs(files) do
-    local path = root .. "/" .. rel
+    local path = root .. "/" .. string.gsub(rel, "\\", "/")
     local src, err = read_file(path)
     if not src then
         table.insert(problems, path .. ": listed in .toc but cannot be read (" .. tostring(err) .. ")")
@@ -179,7 +179,7 @@ if not string.find(version, "Lua") then
     table.insert(problems, "luac5.1 not found: cannot check the Lua 5.0 upvalue limit (set LUAC=...)")
 else
     for _, rel in ipairs(files) do
-        local path = root .. "/" .. rel
+        local path = root .. "/" .. string.gsub(rel, "\\", "/")
         local pipe = io.popen(luac .. " -l -p '" .. path .. "' 2>&1")
         local listing = pipe and pipe:read("*a") or ""
         if pipe then pipe:close() end
