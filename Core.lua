@@ -232,6 +232,12 @@ local function parseBotLifecycleMessage(message)
     if bc then
         return string.format(L["Bot '%s' is in combat"], bc)
     end
+    -- The server's echo of `.bot role self <role>`; the addon already printed its own line.
+    local _, _, pr = string.find(message, "^Your role set to%s+(%a+)%.?$")
+    if pr then
+        local shown = { tank = L["Tank"], healer = L["Healer"], dps = L["DPS"], cleared = L["None"] }
+        return string.format(L["Your role set to %s"], shown[pr] or pr)
+    end
     return nil
 end
 
