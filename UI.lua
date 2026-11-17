@@ -2687,7 +2687,10 @@ end
                 row.partyName = name
                 local level = (UnitLevel and UnitLevel(unit)) or 0
                 local lvlText = (level and level > 0 and ("Lvl " .. level)) or "Lvl ??"
-                local className, classFileName = (UnitClass and UnitClass(unit)) or "Unknown", "UNKNOWN"
+                -- Both returns: the first is localized ("Druide"), only the file name is the same on every client.
+                local className, classFileName
+                if UnitClass then className, classFileName = UnitClass(unit) end
+                className = className or "Unknown"
                 local classId = (classFileName and TB.C.CLASS_NAME_TO_ID and TB.C.CLASS_NAME_TO_ID[classFileName])
                     or (className and TB.C.CLASS_NAME_TO_ID and TB.C.CLASS_NAME_TO_ID[className])
                 if not classId then
