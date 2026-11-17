@@ -129,11 +129,14 @@ local function setSnapshotRow(row)
     if ccMark == "" or ccMark == "-" or not (C.CC_MARK_LABELS and C.CC_MARK_LABELS[ccMark]) then
         ccMark = nil
     end
+    local serverClassName = TB.Trim(row.className or "")
+    if serverClassName == "" or serverClassName == "-" then serverClassName = nil end
     return {
         guid = tostring(row.guid or ""),
         name = name,
         classId = classId,
-        className = (C.CLASS_NAMES and C.CLASS_NAMES[classId]) or tostring(row.classId or "?"),
+        serverClassName = serverClassName,
+        className = TB.GetClassName(classId, serverClassName, name),
         serverState = string.lower(TB.Trim(row.serverState or "")),
         state = row.serverState,
         group = row.group == true and true or false,
@@ -264,11 +267,14 @@ local function commitClaimedSnapshot(rows)
             local location = TB.Trim(row.location or "")
             if location == "" or location == "-" then location = nil end
             if location then location = string.gsub(location, "|", "/") end
+            local serverClassName = TB.Trim(row.className or "")
+            if serverClassName == "" or serverClassName == "-" then serverClassName = nil end
             local entry = {
                 guid = tostring(row.guid or ""),
                 name = name,
                 classId = classId,
-                className = (C.CLASS_NAMES and C.CLASS_NAMES[classId]) or tostring(row.classId or "?"),
+                serverClassName = serverClassName,
+                className = TB.GetClassName(classId, serverClassName, name),
                 level = tonumber(row.level) or 1,
                 serverState = string.lower(TB.Trim(row.serverState or "")),
                 group = row.group == true,
@@ -278,6 +284,7 @@ local function commitClaimedSnapshot(rows)
                 online = online,
                 enteredWorld = enteredWorld,
                 profs = row.profs,
+                alt = row.alt == true,
             }
             claimedState[name] = entry
             table.insert(claimedBots, entry)
@@ -389,7 +396,18 @@ function TB.ParseRosterMessage(msg)
             skipSnapshotRow()
             return true, "row"
         end
-        local guid, name, classId, serverState, group, location, ccMark = unpack(fields)
+        local guid, name, classId, serverState, group, location, f7, f8 = unpack(fields)
+        local ccMark, serverClassName
+        if f8 ~= nil then
+            ccMark = f7
+            serverClassName = f8
+        elseif f7 and f7 ~= "" and f7 ~= "-" then
+            if C.CC_MARK_LABELS and C.CC_MARK_LABELS[string.lower(TB.Trim(f7))] then
+                ccMark = f7
+            else
+                serverClassName = f7
+            end
+        end
         if TB.Trim(guid) == "" or TB.Trim(name) == "" or not string.find(classId, "^%d+$")
             or TB.Trim(serverState) == "" or (group ~= "0" and group ~= "1")
             or TB.Trim(location) == "" then
@@ -410,6 +428,7 @@ function TB.ParseRosterMessage(msg)
             group = group == "1",
             location = location,
             ccMark = ccMark,
+            className = serverClassName,
         })
         return true, "row", normalized
     end
@@ -487,7 +506,7 @@ function TB.ParseRosterMessage(msg)
     fields = protocolFields(msg, "TBM:CLAIMED|")
     if fields then
         local count = table.getn(fields)
-        -- Fields past the 9th come from newer servers and are ignored, so a
+        -- Fields past the 10th come from newer servers and are ignored, so a
         -- module update that appends a field does not break older addons.
         if not claimedReceiving or count < 8 then
             claimedReceiving = nil
@@ -511,6 +530,10 @@ function TB.ParseRosterMessage(msg)
             end
             if profs and table.getn(profs) == 0 then profs = nil end
         end
+        -- Trailing alt flag: the player's own alt in the guild, not a claimed bot.
+        local alt = count >= 10 and fields[10] == "1"
+        -- Trailing class name from ChrClasses.dbc; missing on older servers.
+        local serverClassName = count >= 11 and fields[11] or nil
         local normalized = normalize(name)
         if not normalized or claimedReceiving.names[normalized] then
             claimedReceiving = nil
@@ -527,6 +550,8 @@ function TB.ParseRosterMessage(msg)
             location = location,
             gearLocked = (gearLocked == "1"),
             profs = profs,
+            alt = alt,
+            className = serverClassName,
         })
         return true, "claimed_row", normalized
     end

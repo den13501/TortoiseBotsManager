@@ -162,7 +162,7 @@ function TB.SendBankWithdraw(name, id, label)
     id = tonumber(id)
     if not name or not id then return false end
     if TB.SetStatus then TB.SetStatus(string.format(L["%s takes %s from its bank…"], name, label or ("#" .. tostring(id))), "pending") end
-    return TB.SendBotCommand("command " .. name .. " bank -|Hitem:" .. id .. ":0:0:0|h[" .. (label or ("item " .. id)) .. "]|h")
+    return TB.SendBotCommand("command " .. name .. " bank -|cffffffff|Hitem:" .. id .. ":0:0:0|h[" .. (label or ("item " .. id)) .. "]|h|r")
 end
 
 function TB.SendMailTake(name, n)
@@ -242,9 +242,9 @@ local function createVault()
     close:SetScript("OnClick", function() TB.CloseVault() end)
 
     vault.tabBank = makeTab(vault, L["Bank"], 10, 68, "bank")
-    setTooltip(vault.tabBank, L["Bank"], { L["What this bot keeps in its bank."] })
+    setTooltip(vault.tabBank, L["Bank"], { L[L["What this bot keeps in its bank."]] })
     vault.tabMail = makeTab(vault, L["Mailbox"], 82, 76, "mail")
-    setTooltip(vault.tabMail, L["Mailbox"], { L["Letters waiting for this bot."] })
+    setTooltip(vault.tabMail, L["Mailbox"], { L[L["Letters waiting for this bot."]] })
 
     local summary = vault:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     summary:SetPoint("TOPLEFT", vault, "TOPLEFT", 12, -62)
@@ -275,7 +275,7 @@ local function createVault()
         if not currentBot then return end
         if currentView == "mail" then TB.RequestMailbox(currentBot) else TB.RequestBank(currentBot) end
     end)
-    setTooltip(ask, L["Ask again"], { L["Reloads this list from the bot."] })
+    setTooltip(ask, L["Ask again"], { L[L["Reloads this list from the bot."]] })
     vault.ask = ask
 
     local prev = TB.StyleButton(CreateFrame("Button", nil, vault, "UIPanelButtonTemplate"))
@@ -303,6 +303,12 @@ local function createVault()
     TB.SetTextColor(hint, color("muted"))
     vault.hint = hint
 
+    local empty = vault:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    empty:SetPoint("TOPLEFT", vault, "TOPLEFT", 12, -150)
+    empty:SetWidth(VW - 24); empty:SetJustifyH("CENTER")
+    TB.SetTextColor(empty, color("muted"))
+    vault.empty = empty
+
     vault:Hide()
     TB.botVault = vault
 end
@@ -324,10 +330,10 @@ local function renderRows()
             row.itemId, row.itemName, row.mailN = item.id, item.name, item.n
             if currentView == "mail" then
                 row:SetText(item.text)
-                setTooltip(row, string.format(L["Letter #%s"], tostring(item.n)), { item.text, L["Click: take this letter."] })
+                setTooltip(row, string.format(L["Letter #%s"], tostring(item.n)), { item.text, L[L["Click: take this letter."]] })
             else
                 row:SetText((item.count and item.count > 1 and (item.name .. " x" .. item.count)) or item.name)
-                setTooltip(row, item.name, { L["Click: the bot takes this from its bank."] })
+                setTooltip(row, item.name, { L[L["Click: the bot takes this from its bank."]] })
             end
             row:Show()
             row:Enable()
@@ -347,6 +353,20 @@ local function renderRows()
         vault.ask:SetText(L["Ask again"])
         vault.ask:Enable()
     end
+    if table.getn(list) == 0 then
+        vault.hint:Hide()
+        if v and v.pending then
+            vault.empty:SetText(L["Asking the bot…"])
+        elseif currentView == "mail" then
+            vault.empty:SetText(L["Mailbox is empty. Click Ask again to check."])
+        else
+            vault.empty:SetText(L["Bank is empty. Stand near a bank and click Ask again."])
+        end
+        vault.empty:Show()
+    else
+        vault.hint:Show()
+        vault.empty:Hide()
+    end
     return list
 end
 
@@ -355,7 +375,7 @@ function TB.RefreshVault()
     local entry = (TB.GetRosterEntry and TB.GetRosterEntry(currentBot))
         or (TB.GetClaimedEntry and TB.GetClaimedEntry(currentBot)) or nil
     local classId = entry and entry.classId
-    local col = (classId and C.CLASS_COLORS and C.CLASS_COLORS[classId]) or color("gold")
+    local col = (TB.GetClassColor and TB.GetClassColor(classId)) or color("gold")
     vault.nameText:SetText(currentBot or "")
     vault.nameText:SetTextColor(col[1], col[2], col[3])
     local v = vaults[currentBot]

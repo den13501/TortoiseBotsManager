@@ -670,21 +670,21 @@ local function createWindow()
     win.modeBot:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -73)
     win.modeBot:SetScript("OnClick", function() TB.SetRunMode("bot") end)
     setTooltip(win.modeBot, L["Bots lead"], {
-        L["Suggested when you play healer or DPS."],
-        L["A bot tank leads the way and pulls; you stay in the party and follow."],
-        L["Bind first (target the tank bot), then Start."],
-        L["Your own orders to the bots pause the run until Resume."],
+        L[L["Suggested when you play healer or DPS."]],
+        L[L["A bot tank leads the way and pulls; you stay in the party and follow."]],
+        L[L["Bind first (target the tank bot), then Start."]],
+        L[L["Your own orders to the bots pause the run until Resume."]],
     })
     win.modeYou = TB.StyleButton(CreateFrame("Button", nil, win, "UIPanelButtonTemplate"))
     win.modeYou:SetWidth(139); win.modeYou:SetHeight(24)
     win.modeYou:SetPoint("TOPLEFT", win, "TOPLEFT", 149, -73)
     win.modeYou:SetScript("OnClick", function() TB.SetRunMode("player") end)
     setTooltip(win.modeYou, L["I lead"], {
-        L["Suggested when you play the tank."],
-        L["You walk where you like; the bots pull the plan's packs near you,"],
-        L["mark, crowd-control, rest and revive. Your orders never pause it."],
-        L["No Bind needed: Start binds your party. Target a bot to make it"],
-        L["the puller (needed when no bot in your party is a tank)."],
+        L[L["Suggested when you play the tank."]],
+        L[L["You walk where you like; the bots pull the plan's packs near you,"]],
+        L[L["mark, crowd-control, rest and revive. Your orders never pause it."]],
+        L[L["No Bind needed: Start binds your party. Target a bot to make it"]],
+        L[L["the puller (needed when no bot in your party is a tank)."]],
     })
     win.modeHint = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     win.modeHint:SetPoint("TOPLEFT", win, "TOPLEFT", 12, -100)
@@ -751,7 +751,7 @@ local function createWindow()
         planPage = 1
         TB.RefreshRunWindow()
     end)
-    setTooltip(win.planSearch, L["Search plans"], { L["Type part of a dungeon name, e.g. scarlet or kraul."] })
+    setTooltip(win.planSearch, L["Search plans"], { L[L["Type part of a dungeon name, e.g. scarlet or kraul."]] })
     win.planRows = {}
     for i = 1, PROW do
         local row = TB.StyleButton(CreateFrame("Button", nil, win, "UIPanelButtonTemplate"))
@@ -830,17 +830,17 @@ local function createWindow()
         TB.SetRunStopBeforeBoss(this:GetChecked() and true or false)
     end)
     setTooltip(win.untilBoss, L["Stop before the boss"], {
-        L["The next Start ends the run before the first boss step,"],
-        L["so a trash walk stops at the boss stand."],
-        L["Bots lead only: a player-led Start never carries it."],
+        L[L["The next Start ends the run before the first boss step,"]],
+        L[L["so a trash walk stops at the boss stand."]],
+        L[L["Bots lead only: a player-led Start never carries it."]],
     })
     win.untilLabel = lower:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     win.untilLabel:SetPoint("LEFT", win.untilBoss, "RIGHT", 2, 0)
-    win.untilLabel:SetWidth(70); win.untilLabel:SetJustifyH("LEFT")
-    win.untilLabel:SetText(L["No boss"])
+    win.untilLabel:SetWidth(110); win.untilLabel:SetJustifyH("LEFT")
+    win.untilLabel:SetText(L["Stop before boss"])
     TB.SetTextColor(win.untilLabel, color("muted"))
     win.stopBox = CreateFrame("EditBox", "TortoiseBotsManagerRunStopBox", win, "InputBoxTemplate")
-    TB.StyleEditBox(win.stopBox)
+    TB.StyleEditBox(win.stopBox, L["Optional stop reason"])
     win.stopBox:SetWidth(RW - 24); win.stopBox:SetHeight(20)
     win.stopBox:SetPoint("TOPLEFT", lower, "TOPLEFT", 12, ctlY - 70)
     win.stopBox:SetAutoFocus(false)
@@ -849,7 +849,7 @@ local function createWindow()
     win.stopBox:SetScript("OnTextChanged", function()
         stopReason = this:GetText() or ""
     end)
-    setTooltip(win.stopBox, L["Stop reason"], { L["Optional: why the run ends (shown in the note)."] })
+    setTooltip(win.stopBox, L["Stop reason"], { L[L["Optional: why the run ends (shown in the note)."]] })
     -- What the last click did: sent, then the server's answer.
     win.feedback = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     win.feedback:SetPoint("TOPLEFT", lower, "TOPLEFT", 12, ctlY - 94)
@@ -881,6 +881,7 @@ local function createWindow()
     -- plain dark backing replaces the tooltip backdrop here.
     local barBg = win.runBar:CreateTexture(nil, "BACKGROUND")
     barBg:SetAllPoints(win.runBar)
+    barBg:SetTexture(0.14, 0.14, 0.17, 1)
     win.runFill = win.runBar:CreateTexture(nil, "ARTWORK")
     win.runFill:SetHeight(6)
     win.runLeg = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -1038,8 +1039,8 @@ local function fillRow(row, plan)
     if plan.name == selectedPlan then text = "|cffffd200" .. text .. "|r" end
     row:SetText(text)
     setTooltip(row, TB.RunPlanTitle(plan.name), {
-        string.format(L["%s · map %s · %s steps."], plan.name, tostring(plan.map or "?"), tostring(plan.steps or 0)),
-        L["Click: pick this plan for Start."],
+        string.format(L[L["%s · map %s · %s steps."]], plan.name, tostring(plan.map or "?"), tostring(plan.steps or 0)),
+        L[L["Click: pick this plan for Start."]],
     })
     row:Show()
     row:Enable()
@@ -1300,10 +1301,10 @@ function TB.RefreshRunWindow()
     if win.untilBoss.SetChecked then win.untilBoss:SetChecked(stopBeforeBoss) end
     if live or playerLed then
         win.untilBoss:Disable()
-        win.untilLabel:SetText("|cff8a8a8a" .. L["No boss"] .. "|r")
+        win.untilLabel:SetText("|cff8a8a8a" .. L["Stop before boss"] .. "|r")
     else
         win.untilBoss:Enable()
-        win.untilLabel:SetText(stopBeforeBoss and L["No boss: on"] or L["No boss"])
+        win.untilLabel:SetText(stopBeforeBoss and L["Stop before boss: on"] or L["Stop before boss"])
     end
     if live then win.stop:Enable() else win.stop:Disable() end
 end
@@ -1315,6 +1316,7 @@ function TB.OpenRunWindow()
     if TB.CloseNpc then TB.CloseNpc() end
     if TB.CloseServerInfo then TB.CloseServerInfo() end
     if TB.CloseOrderWindow then TB.CloseOrderWindow() end
+    if TB.CloseBlessings then TB.CloseBlessings() end
     if TB.SetMode then TB.SetMode("full") end
     win:ClearAllPoints()
     local anchor = (TB.botPanel and TB.botPanel.IsVisible and TB.botPanel:IsVisible()) and TB.botPanel or TB.frame

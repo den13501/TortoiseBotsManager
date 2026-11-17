@@ -299,7 +299,7 @@ local function createNpc()
     npc.ask:SetScript("OnClick", function()
         if currentBot then TB.RequestFlights(currentBot) end
     end)
-    setTooltip(npc.ask, L["Find flights"], { L["Lists this flight master's routes, then pick one."] })
+    setTooltip(npc.ask, L["Find flights"], { L[L["Lists this flight master's routes, then pick one."]] })
 
     local prev = TB.StyleButton(CreateFrame("Button", nil, npc, "UIPanelButtonTemplate"))
     prev:SetWidth(26); prev:SetHeight(22)
@@ -334,7 +334,7 @@ local function renderRows()
         if flight then
             row.flightN = flight.n
             row:SetText(flight.n .. ": " .. flight.name)
-            setTooltip(row, flight.name, { L["Click: fly this leg."] })
+            setTooltip(row, flight.name, { L[L["Click: fly this leg."]] })
             row:Show()
             row:Enable()
         else
@@ -364,7 +364,7 @@ function TB.RefreshNpc()
     local entry = (TB.GetRosterEntry and TB.GetRosterEntry(currentBot))
         or (TB.GetClaimedEntry and TB.GetClaimedEntry(currentBot)) or nil
     local classId = entry and entry.classId
-    local col = (classId and C.CLASS_COLORS and C.CLASS_COLORS[classId]) or color("gold")
+    local col = (TB.GetClassColor and TB.GetClassColor(classId)) or color("gold")
     npc.nameText:SetText(currentBot or "")
     npc.nameText:SetTextColor(col[1], col[2], col[3])
     local e = npcs[currentBot]

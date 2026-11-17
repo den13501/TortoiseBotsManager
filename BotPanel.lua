@@ -18,9 +18,10 @@ local PW = 330
 local PH = 470 -- taller than the main window: paper doll + footer
 local SLOT = 34
 local STEP = 38
-local BAG_COLS, BAG_ROWS = 8, 7
+local BAG_COLS, BAG_ROWS = 8, 5
 local SPELL_ROWS = 12
 local EQUIPPED_BAG = 255 -- INVENTORY_SLOT_BAG_0: equipment and backpack
+local EQUIPPED_BAG_SLOTS = { 19, 20, 21, 22 } -- INVENTORY_SLOT_BAG_START..END-1
 
 local function norm(name) return name and TB.NormalizeName(name) or nil end
 local function color(name) return COL[name] or { 1, 1, 1 } end
@@ -646,6 +647,81 @@ local function chatLink(id)
     return (hex or "|cffffffff") .. "|H" .. link .. "|h[" .. name .. "]|h|r"
 end
 
+local bagSlotsCache = {}
+local function isBagItem(id)
+    if not id or not GetItemInfo then return false end
+    local _, _, _, _, itemType, _, _, equipLoc = GetItemInfo(id)
+    return equipLoc == "INVTYPE_BAG" or itemType == "Container" or itemType == "Quiver"
+end
+
+local function bagSlotCount(id, serverSlots)
+    if serverSlots and serverSlots > 0 then return serverSlots end
+    if not id then return nil end
+    if bagSlotsCache[id] then return bagSlotsCache[id] end
+    if not scanTip then
+        scanTip = CreateFrame("GameTooltip", "TortoiseBotsManagerScanTip", UIParent, "GameTooltipTemplate")
+    end
+    if scanTip and scanTip.SetOwner and scanTip.SetHyperlink then
+        scanTip:SetOwner(UIParent, "ANCHOR_NONE")
+        scanTip:SetHyperlink("item:" .. id .. ":0:0:0")
+        for i = 1, 5 do
+            local fs = getglobal("TortoiseBotsManagerScanTipTextLeft" .. i)
+            local text = fs and fs.GetText and fs:GetText()
+            if text then
+                local _, _, n = string.find(text, "(%d+)%s+[Ss]lot")
+                if n then
+                    bagSlotsCache[id] = tonumber(n)
+                    return bagSlotsCache[id]
+                end
+            end
+        end
+    end
+    return nil
+end
+
+function TB.FindPlayerBags()
+    local list = {}
+    if not (GetContainerNumSlots and GetContainerItemLink and GetItemInfo) then return list end
+    for bag = 0, 4 do
+        local slots = GetContainerNumSlots(bag) or 0
+        for slot = 1, slots do
+            local link = GetContainerItemLink(bag, slot)
+            if link then
+                local _, _, idText = string.find(link, "item:(%d+)")
+                local id = idText and tonumber(idText) or nil
+                if id and isBagItem(id) then
+                    local name, _, quality, _, _, _, _, _, texture = GetItemInfo(id)
+                    local locked = false
+                    if GetContainerItemInfo then
+                        local _, _, isLocked = GetContainerItemInfo(bag, slot)
+                        locked = isLocked and true or false
+                    end
+                    table.insert(list, {
+                        bag = bag, slot = slot, id = id, name = name, quality = quality,
+                        texture = texture, slots = bagSlotCount(id), locked = locked,
+                    })
+                end
+            end
+        end
+    end
+    return list
+end
+
+function TB.FindBotCarriedBags(name)
+    local list = {}
+    local inv = TB.GetInventory and TB.GetInventory(norm(name)) or nil
+    for _, item in ipairs(inv and inv.items or {}) do
+        if isBagItem(item.id) then
+            local nameStr, _, quality, texture = itemInfo(item.id)
+            table.insert(list, {
+                bag = item.bag, slot = item.slot, id = item.id, name = nameStr, quality = quality,
+                texture = texture, equippable = item.equippable, slots = bagSlotCount(item.id),
+            })
+        end
+    end
+    return list
+end
+
 local function formatMoney(copper)
     copper = tonumber(copper) or 0
     local g = math.floor(copper / 10000)
@@ -682,12 +758,15 @@ local function botClassId(name)
     if unit and UnitClass then
         local className, classFile = UnitClass(unit)
         local ids = C.CLASS_NAME_TO_ID or {}
-        return ids[classFile or ""] or ids[className or ""]
+        local id = ids[classFile or ""] or ids[className or ""]
+        if id then return id end
     end
     local entry = (TB.GetRosterEntry and TB.GetRosterEntry(name))
         or (TB.GetClaimedEntry and TB.GetClaimedEntry(name))
     return entry and entry.classId or nil
 end
+
+TB.BotClassId = botClassId
 
 -- Only mages (8) and warlocks (9) answer ".bot service".
 function TB.ServiceWanted(name)
@@ -714,6 +793,7 @@ local profPage = 1
 local profSearch = ""
 local profCollapsed = {} -- [skillId] = true while its "Not learned yet" group stays shut
 local pendingGive = nil       -- { bot, bag, slot } awaiting the trade window
+local pendingPlayerGive = nil -- { bot, bag, slot, id } awaiting TRADE_SHOW
 local behaviorPending = {}    -- [bot .. "|" .. key] = true
 local pendingLink = nil       -- { bot, verb, id, label } awaiting the client item cache
 local retryingLink = false    -- true while the OnUpdate retry sends, so a miss does not requeue
@@ -732,15 +812,122 @@ function TB.SendItemOrder(op, bag, slot)
     return TB.SendBotCommand(cmd)
 end
 
+local function placePlayerItemInTrade(bag, slot)
+    if not (PickupContainerItem and ClickTradeButton) then return false end
+    if CursorHasItem and CursorHasItem() then return false end
+    PickupContainerItem(bag, slot)
+    ClickTradeButton(1)
+    if CursorHasItem and CursorHasItem() then
+        if ClearCursor then ClearCursor() end
+        return false
+    end
+    return true
+end
+
+function TB.GivePlayerBagToBot(name, bag, slot, id)
+    name = norm(name)
+    if not name or not bag or not slot then return false end
+    if TradeFrame and TradeFrame.IsVisible and TradeFrame:IsVisible()
+        and UnitName and norm(UnitName("NPC")) == name then
+        if placePlayerItemInTrade(bag, slot) then
+            if TB.SetStatus then TB.SetStatus(string.format(L["Bag placed in trade — accept to give it to %s."], name), "pending") end
+            return true
+        end
+    end
+    pendingPlayerGive = { bot = name, bag = bag, slot = slot, id = id }
+    if TB.SetStatus then TB.SetStatus(string.format(L["Trade → %s…"], name), "pending") end
+    return TB.SendBotCommand("item " .. name .. " trade")
+end
+
+local function bagOptionText(item)
+    local name = item.name or itemLabel(item.id)
+    if item.slots and item.slots > 0 then
+        return name .. " (" .. item.slots .. ")"
+    end
+    return name
+end
+
+function TB.BuildBagSlotMenu(name, slotId, addButton)
+    name = norm(name)
+    if not name then return 0 end
+    local inv = TB.GetInventory and TB.GetInventory(name) or nil
+    local equipped = inv and inv.equipped and inv.equipped[slotId] or nil
+    local title = equipped and equipped.id and itemLabel(equipped.id) or string.format(L["Bag %d"], slotId - 18)
+    addButton({ text = title, isTitle = 1, notCheckable = 1 })
+
+    local count = 0
+    addButton({ text = L["Give a bag"], isTitle = 1, notCheckable = 1 })
+    local playerBags = TB.FindPlayerBags()
+    if table.getn(playerBags) == 0 then
+        addButton({ text = L["No bags in your inventory"], disabled = 1, notCheckable = 1 })
+    else
+        for _, item in ipairs(playerBags) do
+            local bag, slot, id = item.bag, item.slot, item.id
+            addButton({
+                text = bagOptionText(item),
+                notCheckable = 1,
+                disabled = item.locked and 1 or nil,
+                func = function() TB.GivePlayerBagToBot(name, bag, slot, id) end,
+            })
+            count = count + 1
+        end
+    end
+
+    addButton({ text = L["Equip this bag"], isTitle = 1, notCheckable = 1 })
+    local carriedBags = TB.FindBotCarriedBags(name)
+    if table.getn(carriedBags) == 0 then
+        addButton({ text = L["No bags in bot's inventory"], disabled = 1, notCheckable = 1 })
+    else
+        for _, item in ipairs(carriedBags) do
+            local bag, slot = item.bag, item.slot
+            addButton({
+                text = bagOptionText(item),
+                notCheckable = 1,
+                disabled = (not item.equippable) and 1 or nil,
+                func = function() TB.SendItemOrder("equip", bag, slot) end,
+            })
+            count = count + 1
+        end
+    end
+
+    if equipped and equipped.id then
+        addButton({
+            text = L["Unequip bag"],
+            notCheckable = 1,
+            func = function() TB.SendItemOrder("unequip", EQUIPPED_BAG, slotId) end,
+        })
+        count = count + 1
+    end
+    return count
+end
+
+function TB.OpenBagSlotMenu(owner, name, slotId)
+    name = norm(name)
+    if not name or not slotId then return false end
+    if not UIDropDownMenu_Initialize or not ToggleDropDownMenu then return false end
+    if not TB._bagSlotMenu then
+        TB._bagSlotMenu = CreateFrame("Frame", "TortoiseBotsManagerBagSlotMenu", UIParent, "UIDropDownMenuTemplate")
+    end
+    local menu = TB._bagSlotMenu
+    local bot, sId = name, slotId
+    UIDropDownMenu_Initialize(menu, function()
+        TB.BuildBagSlotMenu(bot, sId, UIDropDownMenu_AddButton)
+    end, "MENU")
+    ToggleDropDownMenu(1, nil, menu, owner or "cursor", 0, 0)
+    return true
+end
+
 -- Link orders (`destroy`, `cast Disenchant`, `sendmail`, `bank`) carry the full
 -- item hyperlink, so the module can match the exact stack without a bag/slot.
 -- An uncached item queues a tooltip lookup and retries once cached; the click
 -- is never silently dropped ("Loading…" shows while the client is fetching).
 local function linkText(id)
     if not id or not GetItemInfo then return nil end
-    local name, link = GetItemInfo(id)
+    local name, link, quality = GetItemInfo(id)
     if not name or not link then return nil end
-    return "|H" .. link .. "|h[" .. name .. "]|h", name
+    -- The client rejects a chat link without its colour wrapper ("Invalid escape code").
+    local _, _, _, hex = qualityColor(quality)
+    return hex .. "|H" .. link .. "|h[" .. name .. "]|h|r", name
 end
 
 local function sendLinkOrder(verb, id)
@@ -815,6 +1002,9 @@ end
 
 -- ACK routing from Comms.ParseActionMessage. Returns true when handled.
 function TB.OnBotPanelAck(packet)
+    if TB.OnTotemAck and TB.OnTotemAck(packet) then return true end
+    if TB.OnChoiceAck and TB.OnChoiceAck(packet) then return true end
+    if TB.OnFocusAck and TB.OnFocusAck(packet) then return true end
     local intent = packet.intent or ""
     local botName = string.gsub(packet.scope or "", "^bot:", "")
     local _, _, op = string.find(intent, "^item%s+(%a+)$")
@@ -856,6 +1046,8 @@ function TB.OnBotPanelAck(packet)
 end
 
 function TB.OnBotPanelError(packet)
+    if TB.OnTotemError then TB.OnTotemError(packet) end
+    if TB.OnChoiceError then TB.OnChoiceError(packet) end
     local intent = packet.intent or ""
     if intent == "item give" then pendingGive = nil end
     local _, _, key = string.find(intent, "^behavior%s+(%S+)$")
@@ -967,6 +1159,69 @@ local function paintItemButton(b, entry, emptyTexture)
         b.badge:Hide()
     end
     b:Show()
+end
+
+local function createEquippedBagButton(parent, slotId, index)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetWidth(150); b:SetHeight(28)
+    b:EnableMouse(true)
+    b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    TB.ApplySurface(b, "row")
+    b.slotId = slotId
+    b.slotLabel = string.format(L["Bag %d"], index)
+    b.border = b:CreateTexture(nil, "BACKGROUND")
+    b.border:SetWidth(24); b.border:SetHeight(24)
+    b.border:SetPoint("TOPLEFT", b, "TOPLEFT", 2, -2)
+    b.border:SetTexture(0.18, 0.18, 0.18, 0.9)
+    b.icon = b:CreateTexture(nil, "ARTWORK")
+    b.icon:SetWidth(20); b.icon:SetHeight(20)
+    b.icon:SetPoint("TOPLEFT", b, "TOPLEFT", 4, -4)
+    b.nameText = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.nameText:SetPoint("TOPLEFT", b, "TOPLEFT", 29, -3)
+    b.nameText:SetWidth(118); b.nameText:SetHeight(12); b.nameText:SetJustifyH("LEFT")
+    b.slotsText = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.slotsText:SetPoint("TOPLEFT", b, "TOPLEFT", 29, -15)
+    b.slotsText:SetWidth(118); b.slotsText:SetHeight(11); b.slotsText:SetJustifyH("LEFT")
+    TB.SetTextColor(b.slotsText, color("muted"))
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints(b)
+    hl:SetTexture(1, 1, 1, 0.12)
+    b:SetScript("OnEnter", function()
+        local entry = this.entry
+        GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+        if entry and entry.id then
+            if GameTooltip.SetHyperlink then
+                GameTooltip:SetHyperlink("item:" .. entry.id .. ":0:0:0")
+            else
+                GameTooltip:SetText(itemLabel(entry.id))
+            end
+            local sc = bagSlotCount(entry.id, entry.slots)
+            if sc then GameTooltip:AddLine(sc .. " slots", 0.9, 0.9, 0.9) end
+            GameTooltip:AddLine(L["Click: give a bag or equip from bot's bags"], 0.62, 0.60, 0.56)
+            GameTooltip:AddLine(L["Shift-click: link in chat"], 0.62, 0.60, 0.56)
+        else
+            GameTooltip:SetText(this.slotLabel or L["Bag slot"])
+            GameTooltip:AddLine(L["Empty or not reported by server"], 0.62, 0.60, 0.56)
+            GameTooltip:AddLine(L["Click: give a bag or equip from bot's bags"], 0.62, 0.60, 0.56)
+        end
+        GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    b:SetScript("OnClick", function()
+        local entry = this.entry
+        if entry and entry.id and IsShiftKeyDown and IsShiftKeyDown() then
+            local link = chatLink(entry.id)
+            if link and ChatFrameEditBox and ChatFrameEditBox.IsVisible and ChatFrameEditBox:IsVisible() then
+                ChatFrameEditBox:Insert(link)
+            end
+            return
+        end
+        if currentBot then
+            hideMenu()
+            TB.OpenBagSlotMenu(this, currentBot, this.slotId)
+        end
+    end)
+    return b
 end
 
 local function createMenu(parent)
@@ -1139,11 +1394,11 @@ local function createPanel()
     panel.tabBehavior = makeTab(panel, L["Behaviour"], 134, 62, "behavior")
     panel.tabSpells = makeTab(panel, L["Spells"], 200, 56, "spells")
     panel.tabProfs = makeTab(panel, L["Professions"], 260, 60, "profs")
-    setTooltip(panel.tabGear, L["Gear"], { L["What the bot wears. Click a slot to unequip."] })
-    setTooltip(panel.tabBags, L["Bags"], { L["Everything in the bot's bags. Click an item to equip it or take it."] })
-    setTooltip(panel.tabBehavior, L["Behaviour"], { L["Per-bot combat habits, stored on the server."] })
-    setTooltip(panel.tabSpells, L["Spells"], { L["What this bot can cast. Click a spell to cast it."] })
-    setTooltip(panel.tabProfs, L["Professions"], { L["Trade skills, recipes and what the bot could still learn."], L["Asks the server once; Refresh asks again."] })
+    setTooltip(panel.tabGear, L["Gear"], { L[L["What the bot wears. Click a slot to unequip."]] })
+    setTooltip(panel.tabBags, L["Bags"], { L[L["Everything in the bot's bags. Click an item to equip it or take it."]] })
+    setTooltip(panel.tabBehavior, L["Behaviour"], { L[L["Per-bot combat habits, stored on the server."]] })
+    setTooltip(panel.tabSpells, L["Spells"], { L[L["What this bot can cast. Click a spell to cast it."]] })
+    setTooltip(panel.tabProfs, L["Professions"], { L[L["Trade skills, recipes and what the bot could still learn."]], L[L["Asks the server once; Refresh asks again."]] })
 
     -- Gear view: paper doll around the bot's 3D model.
     local gear = CreateFrame("Frame", nil, panel)
@@ -1193,17 +1448,25 @@ local function createPanel()
     sweep:SetWidth(110); sweep:SetHeight(20)
     sweep:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -12, -72)
     sweep:SetText(L["Equip upgrades"])
-    setTooltip(sweep, L["Equip upgrades (new loot)"], { L["The bot scans its bags and equips everything better."], L["Footer → Auto-gear does a full re-gear from bags instead."] })
+    setTooltip(sweep, L["Equip upgrades (new loot)"], { L[L["The bot scans its bags and equips everything better."]], L[L["Footer → Auto-gear does a full re-gear from bags instead."]] })
     sweep:SetScript("OnClick", function()
         if currentBot then TB.SendBotCommand("command " .. currentBot .. " d equip upgrades") end
     end)
     panel.sweepButton = sweep
+    panel.equippedBagButtons = {}
+    for i, slotId in ipairs(EQUIPPED_BAG_SLOTS) do
+        local b = createEquippedBagButton(bags, slotId, i)
+        local col = math.mod(i - 1, 2)
+        local row = math.floor((i - 1) / 2)
+        b:SetPoint("TOPLEFT", panel, "TOPLEFT", 12 + col * 156, -96 - row * 32)
+        table.insert(panel.equippedBagButtons, b)
+    end
     panel.bagButtons = {}
     local x0 = math.floor((PW - (BAG_COLS * STEP - 4)) / 2)
     for r = 1, BAG_ROWS do
         for c = 1, BAG_COLS do
             local b = createItemButton(bags)
-            b:SetPoint("TOPLEFT", panel, "TOPLEFT", x0 + (c - 1) * STEP, -94 - (r - 1) * STEP)
+            b:SetPoint("TOPLEFT", panel, "TOPLEFT", x0 + (c - 1) * STEP, -162 - (r - 1) * STEP)
             table.insert(panel.bagButtons, b)
         end
     end
@@ -1243,7 +1506,17 @@ local function createPanel()
         chip.lamp = chip:CreateTexture(nil, "OVERLAY")
         chip.lamp:SetWidth(8); chip.lamp:SetHeight(8)
         chip.lamp:SetPoint("RIGHT", chip, "RIGHT", -8, 0)
-        setTooltip(chip, def.label, { def.tip, L["Click to switch on/off."] })
+        chip:SetScript("OnEnter", function()
+            GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+            GameTooltip:SetText(this.def.label)
+            GameTooltip:AddLine(this.def.tip, 0.9, 0.9, 0.9, 1)
+            local stateWord = this.state == "on" and L["On"]
+                or (this.state == "off" and L["Off"] or L["Not yet known"])
+            GameTooltip:AddLine(string.format(L["State: %s"], stateWord), 0.9, 0.9, 0.9, 1)
+            GameTooltip:AddLine(L["Click to switch on/off."], 0.9, 0.9, 0.9, 1)
+            GameTooltip:Show()
+        end)
+        chip:SetScript("OnLeave", function() GameTooltip:Hide() end)
         chip:SetScript("OnClick", function()
             if currentBot then TB.SendBehavior(currentBot, this.def.key) end
         end)
@@ -1254,6 +1527,10 @@ local function createPanel()
     bhHint:SetWidth(PW - 24); bhHint:SetJustifyH("LEFT")
     bhHint:SetText(L["Party-wide switches live on the Fight tab; these override one bot."])
     TB.SetTextColor(bhHint, color("muted"))
+    panel.behaviorHint = bhHint
+    if TB.CreateTotemBlock then TB.CreateTotemBlock(panel, behavior) end
+    if TB.CreateChoiceBlock then TB.CreateChoiceBlock(panel, behavior) end
+    if TB.CreateFocusBlock then TB.CreateFocusBlock(panel, behavior) end
 
     -- Spells view: the bot's spellbook, one row per known spell.
     local spellsView = CreateFrame("Frame", nil, panel)
@@ -1270,7 +1547,7 @@ local function createPanel()
         row:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -98 - (i - 1) * 22)
         row.spellId = 0
         row.spellName = nil
-        setTooltip(row, L["Spell"], { L["Click: ask the bot to cast it."] })
+        setTooltip(row, L["Spell"], { L[L["Click: ask the bot to cast it."]] })
         row:SetScript("OnClick", function()
             if currentBot and this.spellName then TB.SendBotCast(currentBot, this.spellName) end
         end)
@@ -1287,7 +1564,7 @@ local function createPanel()
     ask:SetWidth(150); ask:SetHeight(22)
     ask:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -366)
     ask:SetText(L["Ask for spellbook"])
-    setTooltip(ask, L["Ask for spellbook"], { L["Lists what this bot can cast."], L["Click a row to cast it."] })
+    setTooltip(ask, L["Ask for spellbook"], { L[L["Lists what this bot can cast."]], L[L["Click a row to cast it."]] })
     ask:SetScript("OnClick", function()
         if currentBot then TB.RequestSpells(currentBot) end
     end)
@@ -1386,7 +1663,7 @@ local function createPanel()
     profAsk:SetWidth(150); profAsk:SetHeight(22)
     profAsk:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -366)
     profAsk:SetText(L["Refresh professions"])
-    setTooltip(profAsk, L["Refresh professions"], { L["Asks the bot for its skills and recipes again."] })
+    setTooltip(profAsk, L["Refresh professions"], { L[L["Asks the bot for its skills and recipes again."]] })
     profAsk:SetScript("OnClick", function()
         if currentBot then TB.RequestProfessions(currentBot) end
     end)
@@ -1413,8 +1690,8 @@ local function createPanel()
     food:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 54)
     food:SetText(L["Food & Water"])
     setTooltip(food, L["Food & Water"], {
-        L["The bot opens a trade with conjured food and water in it."],
-        L["Accept the trade to take it."],
+        L[L["The bot opens a trade with conjured food and water in it."]],
+        L[L["Accept the trade to take it."]],
     })
     food:SetScript("OnClick", function() TB.SendItemOrder("trade") end)
     panel.foodButton = food
@@ -1425,8 +1702,8 @@ local function createPanel()
     stone:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 54)
     stone:SetText(L["Healthstone"])
     setTooltip(stone, L["Healthstone"], {
-        L["The bot opens a trade with a healthstone in it."],
-        L["Accept the trade to take it."],
+        L[L["The bot opens a trade with a healthstone in it."]],
+        L[L["Accept the trade to take it."]],
     })
     stone:SetScript("OnClick", function() TB.SendItemOrder("trade") end)
     panel.healthstoneButton = stone
@@ -1436,7 +1713,7 @@ local function createPanel()
     portal:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 54)
     portal:SetText(L["Portal"])
     setTooltip(portal, L["Portal"], {
-        L["The bot opens a portal. Pick where it goes."],
+        L[L["The bot opens a portal. Pick where it goes."]],
     })
     portal:SetScript("OnClick", function()
         if currentBot then TB.OpenServicePortalMenu(currentBot) end
@@ -1448,9 +1725,9 @@ local function createPanel()
     trade:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 28)
     trade:SetText(L["Trade"])
     setTooltip(trade, L["Trade"], {
-        L["Opens a trade window with this bot."],
-        L["Put your items or gold in and accept - the bot accepts on its own."],
-        L["To take an item from the bot, click it in Bags → Give to me."],
+        L[L["Opens a trade window with this bot."]],
+        L[L["Put your items or gold in and accept - the bot accepts on its own."]],
+        L[L["To take an item from the bot, click it in Bags → Give to me."]],
     })
     trade:SetScript("OnClick", function() TB.SendItemOrder("trade") end)
     panel.tradeButton = trade
@@ -1459,11 +1736,13 @@ local function createPanel()
     refresh:SetWidth(56); refresh:SetHeight(22)
     refresh:SetPoint("LEFT", trade, "RIGHT", 3, 0)
     refresh:SetText(L["Refresh"])
-    setTooltip(refresh, L["Refresh"], { L["Reload gear, bags, behaviour, conjured goods and professions from the server."] })
+    setTooltip(refresh, L["Refresh"], { L[L["Reload gear, bags, behaviour, totems, conjured goods and professions from the server."]] })
     refresh:SetScript("OnClick", function()
         if currentBot then TB.RequestInventory(currentBot) end
         if currentBot then TB.RequestProfessions(currentBot) end
         if currentBot and TB.ServiceWanted(currentBot) then TB.RequestService(currentBot) end
+        if currentBot and TB.TotemWanted(currentBot) then TB.RequestTotems(currentBot) end
+        if currentBot and TB.HasChoiceCapability and TB.HasChoiceCapability() then TB.RequestChoices(currentBot) end
         if TB.PollList then TB.PollList(true) end
     end)
     panel.refreshButton = refresh
@@ -1472,7 +1751,7 @@ local function createPanel()
     npcLink:SetWidth(38); npcLink:SetHeight(22)
     npcLink:SetPoint("LEFT", refresh, "RIGHT", 3, 0)
     npcLink:SetText(L["NPC"])
-    setTooltip(npcLink, L["NPC errands"], { L["Talk, bind, learn and flights for this bot."] })
+    setTooltip(npcLink, L["NPC errands"], { L[L["Talk, bind, learn and flights for this bot."]] })
     npcLink:SetScript("OnClick", function()
         if currentBot and TB.OpenNpc then TB.OpenNpc(currentBot) end
     end)
@@ -1482,7 +1761,7 @@ local function createPanel()
     vaultLink:SetWidth(44); vaultLink:SetHeight(22)
     vaultLink:SetPoint("LEFT", npcLink, "RIGHT", 3, 0)
     vaultLink:SetText(L["Bank"])
-    setTooltip(vaultLink, L["Bank and mail"], { L["Lists what this bot keeps in its bank and mailbox."] })
+    setTooltip(vaultLink, L["Bank and mail"], { L[L["Lists what this bot keeps in its bank and mailbox."]] })
     vaultLink:SetScript("OnClick", function()
         if currentBot and TB.OpenVault then TB.OpenVault(currentBot) end
     end)
@@ -1492,7 +1771,7 @@ local function createPanel()
     upkeep:SetWidth(50); upkeep:SetHeight(22)
     upkeep:SetPoint("LEFT", vaultLink, "RIGHT", 3, 0)
     upkeep:SetText(L["Upkeep"])
-    setTooltip(upkeep, L["Upkeep"], { L["Restock this bot: food, drink, reagents, ammo and repairs."], L["Only while the bot is online."] })
+    setTooltip(upkeep, L["Upkeep"], { L[L["Restock this bot: food, drink, reagents, ammo and repairs."]], L[L["Only while the bot is online."]] })
     upkeep:SetScript("OnClick", function()
         if currentBot then TB.SendBotCommand("maintenance " .. currentBot) end
         if TB.PollList then TB.PollList(true) end
@@ -1503,7 +1782,7 @@ local function createPanel()
     gearup:SetWidth(63); gearup:SetHeight(22)
     gearup:SetPoint("LEFT", upkeep, "RIGHT", 3, 0)
     gearup:SetText(L["AutoGear"])
-    setTooltip(gearup, L["Auto-gear (bags)"], { L["The bot equips the best gear it already owns in its bags."], L["Bags → Equip upgrades re-scans and equips new loot instead."], L["Only while the bot is online."] })
+    setTooltip(gearup, L["Auto-gear (bags)"], { L[L["The bot equips the best gear it already owns in its bags."]], L[L["Bags → Equip upgrades re-scans and equips new loot instead."]], L[L["Only while the bot is online."]] })
     gearup:SetScript("OnClick", function()
         if currentBot then TB.SendBotCommand("autogear " .. currentBot) end
         if currentBot then TB.RequestInventory(currentBot) end
@@ -1544,7 +1823,7 @@ end
 -- ── rendering ───────────────────────────────────────────────────────────────
 local function renderHeader(inv)
     local classId = botClassId(currentBot)
-    local col = classId and C.CLASS_COLORS and C.CLASS_COLORS[classId] or color("gold")
+    local col = TB.GetClassColor and TB.GetClassColor(classId) or color("gold")
     panel.nameText:SetText(currentBot or "")
     panel.nameText:SetTextColor(col[1], col[2], col[3])
     local parts = {}
@@ -1555,7 +1834,11 @@ local function renderHeader(inv)
     elseif claimed and claimed.level then
         table.insert(parts, string.format(L["Lvl %s"], tostring(claimed.level)))
     end
-    if classId and C.CLASS_NAMES then table.insert(parts, C.CLASS_NAMES[classId]) end
+    local entry = (TB.GetRosterEntry and TB.GetRosterEntry(currentBot))
+        or (TB.GetClaimedEntry and TB.GetClaimedEntry(currentBot))
+    local className = TB.GetClassName and TB.GetClassName(classId, entry and entry.serverClassName, currentBot)
+        or (classId and C.CLASS_NAMES and C.CLASS_NAMES[classId])
+    if className then table.insert(parts, className) end
     if claimed then
         if claimed.gearLocked then
             table.insert(parts, "|cffffd200" .. L["Gear Locked"] .. "|r")
@@ -1634,6 +1917,29 @@ local function renderGear(inv)
 end
 
 local function renderBags(inv)
+    local equipped = inv and inv.equipped or {}
+    for i, b in ipairs(panel.equippedBagButtons or {}) do
+        local item = equipped[b.slotId]
+        if item and item.id then
+            b.entry = { id = item.id, bag = EQUIPPED_BAG, slot = b.slotId, equipped = true, slots = item.slots }
+            local name, _, quality, texture = itemInfo(item.id)
+            if not texture then requestItem(item.id) end
+            b.icon:SetTexture(texture or "Interface\\Icons\\INV_Misc_QuestionMark")
+            b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+            local r, g, bl = qualityColor(quality)
+            b.border:SetTexture(r, g, bl, 0.95)
+            b.nameText:SetText(name or ("item #" .. item.id))
+            local sc = bagSlotCount(item.id, item.slots)
+            b.slotsText:SetText(sc and string.format(L["%s slots"], sc) or L["Equipped"])
+        else
+            b.entry = nil
+            b.icon:SetTexture("Interface\\PaperDoll\\UI-PaperDoll-Slot-Bag")
+            b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+            b.border:SetTexture(0.18, 0.18, 0.18, 0.9)
+            b.nameText:SetText(string.format(L["Bag %d"], i))
+            b.slotsText:SetText(inv and L["Empty / not reported"] or L["Loading…"])
+        end
+    end
     local items = inv and inv.items or {}
     local perPage = BAG_COLS * BAG_ROWS
     local pages = math.max(1, math.ceil(table.getn(items) / perPage))
@@ -1654,25 +1960,53 @@ local function renderBags(inv)
     if bagPage < pages then panel.nextPage:Enable() else panel.nextPage:Disable() end
 end
 
+-- Whether a behaviour chip shows for a bot: a mana chip only for mana
+-- classes, a class chip only for that class, an optional chip only once the
+-- bot's state reached us and the server reported that key.
+-- "heal" or "dps" from the BOTSTATE specs field, nil for a tank spec or
+-- while unknown (a priest's `hybrid` fights as Holy with Off-DPS).
+local HEAL_SPECS = { holy = true, discipline = true, restoration = true }
+local DPS_SPECS = { shadow = true, elemental = true, enhancement = true, retribution = true,
+    ["dps feral"] = true, balance = true }
+local TANK_SPECS = { protection = true, ["tank feral"] = true, ["tank shaman"] = true }
+function TB.BotSpecKind(specs)
+    if not specs or specs == "" then return nil end
+    local kind = nil
+    for spec in string.gfind(specs, "[^+]+") do
+        if TANK_SPECS[spec] then return nil end
+        if HEAL_SPECS[spec] then kind = "heal"
+        elseif DPS_SPECS[spec] and not kind then kind = "dps" end
+    end
+    return kind
+end
+
+function TB.BehaviorChipShown(def, st, classId)
+    if def.mana and classId and C.NO_MANA_CLASSES and C.NO_MANA_CLASSES[classId] then return false end
+    if def.class and def.class ~= classId then return false end
+    if def.spec and TB.BotSpecKind(st and st.specs) ~= def.spec then return false end
+    if def.optional and st and st[def.key] == nil then return false end
+    return true
+end
+
 local function renderBehavior()
     local st = TB.GetBotState(currentBot)
     local classId = botClassId(currentBot)
-    local noMana = classId and C.NO_MANA_CLASSES and C.NO_MANA_CLASSES[classId]
     local shown = 0
     for _, def in ipairs(C.BEHAVIORS or {}) do
         local key = def.key
         local chip = panel.behaviorChips[key]
         local value = st and st[key]
         local pending = currentBot and behaviorPending[norm(currentBot) .. "|" .. key]
-        if chip.def.mana and noMana then
+        if not TB.BehaviorChipShown(chip.def, st, classId) then
             chip:Hide()
         else
             -- Two columns, reflowed so a hidden chip leaves no hole.
             chip:ClearAllPoints()
             chip:SetPoint("TOPLEFT", panel, "TOPLEFT", 12 + math.mod(shown, 2) * 156,
-                -98 - math.floor(shown / 2) * 30)
+                -96 - math.floor(shown / 2) * 28)
             shown = shown + 1
             chip:Show()
+            chip.state = value
             local stateText = value == "on" and "On" or (value == "off" and "Off" or "?")
             chip:SetText(chip.def.label .. ": " .. stateText)
             if value == "on" then chip.lamp:SetTexture(0.30, 0.90, 0.45, 1)
@@ -1681,6 +2015,13 @@ local function renderBehavior()
             if st and not pending then chip:Enable() else chip:Disable() end
         end
     end
+    panel.behaviorHint:ClearAllPoints()
+    local hintY = -98 - math.ceil(shown / 2) * 28
+    panel.behaviorHint:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, hintY)
+    local choiceTop = hintY - 20
+    if TB.RenderFocusBlock then choiceTop = TB.RenderFocusBlock(currentBot, choiceTop) end
+    if TB.RenderTotemBlock then TB.RenderTotemBlock(currentBot, classId, choiceTop) end
+    if TB.RenderChoiceBlock then TB.RenderChoiceBlock(currentBot, classId, choiceTop) end
 end
 
 local function renderSpells()
@@ -1968,6 +2309,7 @@ function TB.OpenBotPanel(name, view)
     if currentBot and currentBot ~= name then TB.SetSpellPending(currentBot, false) end
     if TB.CloseRunWindow then TB.CloseRunWindow() end
     if TB.CloseOrderWindow then TB.CloseOrderWindow() end
+    if TB.CloseBlessings then TB.CloseBlessings() end
     if TB.SetMode then TB.SetMode("full") end
     if currentBot ~= name then bagPage = 1; spellPage = 1; profPage = 1; profSearch = "" end
     currentBot = name
@@ -1994,6 +2336,8 @@ function TB.OpenBotPanel(name, view)
     -- again. Never on a timer, never on hover. The ask travels with the
     -- inventory request, so one open is one extra line at most.
     if TB.ServiceWanted(name) and not services[name] then TB.RequestService(name) end
+    if TB.TotemWanted(name) then TB.RequestTotems(name) end
+    if TB.HasChoiceCapability and TB.HasChoiceCapability() and TB.GetChoices and not TB.GetChoices(name) then TB.RequestChoices(name) end
     return true
 end
 
@@ -2020,8 +2364,16 @@ tradeFrame:SetScript("OnEvent", function()
             pendingGive = nil
             TB.SendBotCommand("item " .. give.bot .. " give " .. give.bag .. " " .. give.slot)
         end
+        local pGive = pendingPlayerGive
+        if pGive and partner == pGive.bot then
+            pendingPlayerGive = nil
+            if placePlayerItemInTrade(pGive.bag, pGive.slot) and TB.SetStatus then
+                TB.SetStatus(string.format(L["Bag placed in trade — accept to give it to %s."], partner), "pending")
+            end
+        end
     elseif event == "TRADE_CLOSED" then
         pendingGive = nil
+        pendingPlayerGive = nil
         -- Traded items change the bags: reload what the panel shows.
         if TB.GetBotPanelBot() then
             TB.inventoryRefreshBot = TB.GetBotPanelBot()

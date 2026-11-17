@@ -2,6 +2,59 @@
 
 All notable changes to TortoiseBotsManager are documented here.
 
+## v2.3.2 (2026-11-16)
+
+### Tactical & Actions
+- Item orders (destroy, disenchant, mail, use, bank withdraw) now send fully-formed item links, so the server no longer rejects commands with "Invalid escape code in chat message" [#90](https://github.com/Sagiroth/TortoiseBotsManager/pull/90)
+
+### UI & Controls
+- Bags tab now displays the bot's four equipped bags—including hunter quivers and ammo pouches—with icon, name and slot size [#90](https://github.com/Sagiroth/TortoiseBotsManager/pull/90)
+- Click a bag slot to hand the bot a bag from your own inventory, equip one it already carries, or remove a bag outright [#90](https://github.com/Sagiroth/TortoiseBotsManager/pull/90)
+
+---
+
+## v2.3.1 (2026-11-15)
+
+### Roster & Lifecycle
+
+- Unknown classes from custom server modules now show a question-mark icon instead of an empty slot, and no longer display a raw class ID number (e.g. "12") in place of the class name. [#87](https://github.com/Sagiroth/TortoiseBotsManager/pull/87)
+- Fake specs are gone — an unrecognized class no longer appears as a Warrior with Warrior specs in the Party tab, so custom bots can't be misread as plate-wearing tanks. [#87](https://github.com/Sagiroth/TortoiseBotsManager/pull/87)
+- Class names resolve in a clear fallback order: server-provided name first, then the game client's name when the bot is in your party, and finally a plain "Unknown class" label. [#87](https://github.com/Sagiroth/TortoiseBotsManager/pull/87)
+- Backwards compatible in both directions — works against older servers that don't send class names, and older addon builds keep working with newer servers. [#87](https://github.com/Sagiroth/TortoiseBotsManager/pull/87)
+
+---
+
+## v2.3.0 (2026-11-14)
+
+### Guild Orders & Alts
+- Guild tab now shows your own alts with a blue **Your alt** badge, so you can send them on guild orders directly from the addon. [#85](https://github.com/Sagiroth/TortoiseBotsManager/pull/85)
+- Alt rows have no **Release** entry, since Release only applies to claimed bots. [#85](https://github.com/Sagiroth/TortoiseBotsManager/pull/85)
+- The Guild header counts them separately, e.g. **Claimed: 6, 2 alts**, keeping claimed bots and your own characters distinct. [#85](https://github.com/Sagiroth/TortoiseBotsManager/pull/85)
+- Before an alt’s order window opens, a confirmation asks you to accept: the order spends that alt’s own gold, and rewards go to the guild bank or by mail. [#85](https://github.com/Sagiroth/TortoiseBotsManager/pull/85)
+
+### Tactical & Class Controls
+- Added an **Off-heal / Off-DPS** switch in the bot panel’s **Behaviour** view and the **Class** column of the Bots window. [#84](https://github.com/Sagiroth/TortoiseBotsManager/pull/84)
+- The switch only appears when it fits the bot’s current spec: Off-heal on damage specs, Off-DPS on healers, nothing on tanks; hidden on servers that do not report it. [#84](https://github.com/Sagiroth/TortoiseBotsManager/pull/84)
+- Added class-specific controls for poisons, stings, and demons. [#84](https://github.com/Sagiroth/TortoiseBotsManager/pull/84)
+- New **Focus** column in the Bots window shows each bot’s raid-mark icon, with a **Focus mark: Skull** button in the Behaviour view. [#84](https://github.com/Sagiroth/TortoiseBotsManager/pull/84)
+
+---
+
+## v2.2.0 (2026-11-13)
+
+### Tactical & Actions
+- New **Hold Position** chip in the Behaviour view: the bot keeps following and fighting but no longer runs from enemies on its own. [#82](https://github.com/Sagiroth/TortoiseBotsManager/pull/82)
+- New **No Dungeon Blink** chip, shown on mage bots only: disables Blink inside dungeons and raids. [#82](https://github.com/Sagiroth/TortoiseBotsManager/pull/82)
+- **Shaman totem picker** (Behaviour view): one button per element slot (earth, fire, water, air) with "Auto" plus any totems the bot has trained. [#82](https://github.com/Sagiroth/TortoiseBotsManager/pull/82)
+- Totem drop mode control added alongside the picker (auto, before the pull, on demand) so you can set when totems go down. [#82](https://github.com/Sagiroth/TortoiseBotsManager/pull/82)
+- **Blessings grid** for paladin bots: pick and apply blessings per bot from a single grid instead of one buff at a time. [#82](https://github.com/Sagiroth/TortoiseBotsManager/pull/82)
+
+### UI & Controls
+- New controls are gated on the matching TortoiseBots server build — on an older server the new chips and pickers stay hidden rather than showing dead options. [#82](https://github.com/Sagiroth/TortoiseBotsManager/pull/82)
+- Totem presets let you save and re-apply a full elemental loadout in one click. [#82](https://github.com/Sagiroth/TortoiseBotsManager/pull/82)
+
+---
+
 ## v2.1.3 (2026-11-10)
 
 ### UI & Controls

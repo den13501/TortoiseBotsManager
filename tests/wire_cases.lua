@@ -153,6 +153,43 @@ local cases = {
         end,
     },
     {
+        id = "fight.engage",
+        expected = { ".bot action engage" },
+        trigger = function()
+            TB.OnSystemMessage("TBM:CAPS|flee,inventory,behavior,claimed-roster,engage")
+            setTarget(false, nil)
+            TB.Refresh()
+            assert(TB.actionButtons.engage.visible, "Engage shows with the capability")
+            assert(TB.actionButtons.engage.enabled, "Engage needs no enemy target")
+            this = TB.actionButtons.engage
+            TB.actionButtons.engage.scripts.OnClick(TB.actionButtons.engage)
+        end,
+    },
+    {
+        id = "fight.engage.hidden",
+        expected = { },
+        trigger = function()
+            TB.OnSystemMessage("TBM:CAPS|flee,inventory,behavior,claimed-roster")
+            setTarget(true, "Enemy")
+            TB.Refresh()
+            assert(not TB.actionButtons.engage.visible, "Engage hides without the capability")
+        end,
+    },
+    {
+        id = "fight.engage.ack",
+        expected = { },
+        trigger = function()
+            TB.OnSystemMessage("TBM:CAPS|engage")
+            TB.OnSystemMessage("TBM:ACTION_ACK|engage|party|2|")
+            assert(TB.lastActionAck and TB.lastActionAck.intent == "engage"
+                and TB.lastActionAck.scope == "party" and TB.lastActionAck.count == 2
+                and TB.lastActionAck.executor == "-", "the empty-executor engage ACK parses")
+            TB.OnSystemMessage("TBM:ACTION_ERR|engage|no-bots|No scoped bot accepted")
+            assert(TB.lastActionError and TB.lastActionError.intent == "engage"
+                and TB.lastActionError.code == "no-bots", "the engage refusal parses")
+        end,
+    },
+    {
         id = "fight.focusSkull",
         expected = { ".bot action focus skull" },
         trigger = function()
@@ -986,7 +1023,7 @@ local cases = {
     },
     {
         id = "party.bot.tank",
-        expected = { ".bot role Tankbot tank" },
+        expected = { ".bot role Tankbot protection" },
         trigger = function()
             setParty({ "Tankbot" }, "Warrior")
             TB.ShowTab("party")
@@ -997,7 +1034,7 @@ local cases = {
     },
     {
         id = "party.bot.demote_to_dps",
-        expected = { ".bot role Tankbot clear", ".bot strategy +arms,-protection,-fury Tankbot" },
+        expected = { ".bot role Tankbot arms" },
         trigger = function()
             setParty({ "Tankbot" }, "Warrior")
             TortoiseBotsDB.botRoles["Tankbot"] = "tank"
@@ -1009,7 +1046,7 @@ local cases = {
     },
     {
         id = "party.bot.priest.shadow",
-        expected = { ".bot strategy +shadow,-holy,-discipline,-offdps Priestbot" },
+        expected = { ".bot role Priestbot shadow" },
         trigger = function()
             setParty({ "Priestbot" }, "Priest")
             TortoiseBotsDB.botRoles["Priestbot"] = "heal"
@@ -1148,7 +1185,7 @@ local cases = {
     },
     {
         id = "guild.role.demote",
-        expected = { ".bot role Goldie clear", ".bot strategy +arms,-protection,-fury Goldie" },
+        expected = { ".bot role Goldie arms" },
         trigger = function()
             TB.ShowTab("guild")
             TortoiseBotsDB.botRoles["Goldie"] = "tank"
@@ -1159,7 +1196,7 @@ local cases = {
     },
     {
         id = "guild.role.promote_tank",
-        expected = { ".bot role Goldie tank" },
+        expected = { ".bot role Goldie protection" },
         trigger = function()
             TB.ShowTab("guild")
             TortoiseBotsDB.botRoles["Goldie"] = "fury"
@@ -1611,7 +1648,7 @@ local cases = {
     },
     {
         id = "botpanel.use",
-        expected = { ".bot command Alpha u |Hitem:159:0:0:0|h[Refreshing Spring Water]|h" },
+        expected = { ".bot command Alpha u |cffffffff|Hitem:159:0:0:0|h[Refreshing Spring Water]|h|r" },
         trigger = function()
             if env.seedItem then env.seedItem(159, { name = "Refreshing Spring Water", quality = 1, texture = "Interface\\Icons\\INV_Drink_07" }) end
             TB.botPanel.tabBags.scripts.OnClick(TB.botPanel.tabBags)
@@ -1730,7 +1767,7 @@ local cases = {
     -- P9: advanced item-menu rows (destroy asks first, rest send on click).
     {
         id = "botpanel.disenchant",
-        expected = { ".bot inv Alpha", ".bot command Alpha cast Disenchant |Hitem:1201:0:0:0|h[Shadowgem]|h" },
+        expected = { ".bot inv Alpha", ".bot command Alpha cast Disenchant |cffffffff|Hitem:1201:0:0:0|h[Shadowgem]|h|r" },
         trigger = function()
             if env.seedItem then env.seedItem(1201, { name = "Shadowgem", quality = 2, texture = "Interface\\Icons\\INV_Misc_Gem_Amethyst_01" }) end
             TB.OpenBotPanel("Alpha", "bags")
@@ -1750,7 +1787,7 @@ local cases = {
     },
     {
         id = "botpanel.sendmail",
-        expected = { ".bot inv Alpha", ".bot command Alpha sendmail |Hitem:1201:0:0:0|h[Shadowgem]|h" },
+        expected = { ".bot inv Alpha", ".bot command Alpha sendmail |cffffffff|Hitem:1201:0:0:0|h[Shadowgem]|h|r" },
         trigger = function()
             TB.OpenBotPanel("Alpha", "bags")
             local gem = nil
@@ -1769,7 +1806,7 @@ local cases = {
     },
     {
         id = "botpanel.bank",
-        expected = { ".bot inv Alpha", ".bot command Alpha bank |Hitem:1201:0:0:0|h[Shadowgem]|h" },
+        expected = { ".bot inv Alpha", ".bot command Alpha bank |cffffffff|Hitem:1201:0:0:0|h[Shadowgem]|h|r" },
         trigger = function()
             TB.OpenBotPanel("Alpha", "bags")
             local gem = nil
@@ -1788,7 +1825,7 @@ local cases = {
     },
     {
         id = "botpanel.destroy",
-        expected = { ".bot inv Alpha", ".bot command Alpha destroy |Hitem:6948:0:0:0|h[Hearthstone]|h", ".bot inv Alpha" },
+        expected = { ".bot inv Alpha", ".bot command Alpha destroy |cffffffff|Hitem:6948:0:0:0|h[Hearthstone]|h|r", ".bot inv Alpha" },
         trigger = function()
             if env.seedItem then env.seedItem(6948, { name = "Hearthstone", quality = 1, texture = "Interface\\Icons\\INV_Misc_Rune_01" }) end
             TB.OpenBotPanel("Alpha", "bags")
@@ -1912,7 +1949,7 @@ local cases = {
     -- ── P1: role-wire correctness ────────────────────────────────────
     {
         id = "p1.role.warrior.dps",
-        expected = { ".bot strategy +arms,-protection,-fury Warrspec" },
+        expected = { ".bot role Warrspec arms" },
         trigger = function()
             setParty({ "Warrspec" }, "Warrior")
             TortoiseBotsDB.botRoles["Warrspec"] = nil
@@ -1924,7 +1961,7 @@ local cases = {
     },
     {
         id = "p1.role.paladin.heal",
-        expected = { ".bot strategy +holy,-protection,-retribution Pallyspec" },
+        expected = { ".bot role Pallyspec holy" },
         trigger = function()
             setParty({ "Pallyspec" }, "Paladin")
             TortoiseBotsDB.botRoles["Pallyspec"] = "dps"
@@ -1936,7 +1973,7 @@ local cases = {
     },
     {
         id = "p1.role.priest.shadow",
-        expected = { ".bot strategy +shadow,-holy,-discipline,-offdps Prispec" },
+        expected = { ".bot role Prispec shadow" },
         trigger = function()
             setParty({ "Prispec" }, "Priest")
             TortoiseBotsDB.botRoles["Prispec"] = "heal"
@@ -2131,7 +2168,7 @@ local cases = {
     },
     {
         id = "p8.vault.withdraw",
-        expected = { ".bot command Alpha bank", ".bot command Alpha bank -|Hitem:1234:0:0:0|h[Linen Cloth]|h" },
+        expected = { ".bot command Alpha bank", ".bot command Alpha bank -|cffffffff|Hitem:1234:0:0:0|h[Linen Cloth]|h|r" },
         trigger = function()
             TB.OpenVault("Alpha")
             TB.OnWhisperMessage("=== Bank ===", "Alpha")

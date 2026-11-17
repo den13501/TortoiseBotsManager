@@ -7,7 +7,7 @@ local TB = TortoiseBots
 local L = TB.L
 TB.C = TB.C or {}
 
-TB.C.VERSION = "2.1.3"
+TB.C.VERSION = "2.3.2"
 
 -- Author credit shown in the window header, the load message and /tbm help.
 -- Forks and repacks must keep it (see README "Credit").
@@ -143,6 +143,15 @@ TB.C.ACTION_DEFINITIONS = {
         icon = "Interface\\Icons\\Ability_TrueShot",
         tip = L["Tank body-pulls your target while other bots hold back."],
         mini = 5,
+    },
+    {
+        id = "engage",
+        intent = "engage",
+        label = L["My pull"],
+        section = "pull",
+        cap = "engage",
+        icon = "Interface\\Icons\\Ability_Warrior_Charge",
+        tip = L["Bots hold fire until your pull reaches them (or a few seconds after you enter combat): you tank, they join."],
     },
     {
         id = "pullback",
@@ -464,6 +473,8 @@ TB.C.ACTION_ICONS.hold = "Interface\\Icons\\Spell_Nature_Slow"
 
 TB.C.ACTION_LABELS = {
     ["corpse run"]         = L["Corpse run"],
+    ["focus"]              = L["Focus mark"],
+    ["focus status"]       = L["Focus mark"],
     ["raid status"]        = L["Raid status"],
     ["raid tankface"]      = L["Tank face"],
     ["raid douse"]         = L["Douse runes"],
@@ -475,6 +486,8 @@ TB.C.ACTION_LABELS = {
     ["item give"]          = L["Give"],
     ["item trade"]         = L["Trade"],
     ["service portal"]     = L["Portal"],
+    ["blessing"]           = L["Blessing"],
+    ["blessing status"]    = L["Blessings"],
     ["cast Disenchant"]    = L["Disenchant"],
     ["sendmail"]           = L["Send by mail"],
     ["bank"]               = L["Put to bank"],
@@ -517,7 +530,10 @@ for _, def in ipairs(TB.C.ACTION_DEFINITIONS) do
 end
 
 -- Per-bot behaviour toggles in the bot panel (`.bot behavior <bot> <key>`).
--- `mana` limits a toggle to classes that use mana.
+-- `mana` limits a toggle to classes that use mana, `class` to one class id.
+-- `optional` hides it until the server reports the key (older servers do not).
+-- `spec` shows it only while the bot fights in that kind of spec ("heal" or
+-- "dps", read from the BOTSTATE specs; see TB.BotSpecKind).
 TB.C.BEHAVIORS = {
     { key = "loot",     label = L["Loot corpses"], tip = L["Loot corpses after a fight."] },
     { key = "aoe",      label = L["AoE spells"],   tip = L["Use area-of-effect abilities (held back next to crowd-controlled mobs)."] },
@@ -528,8 +544,54 @@ TB.C.BEHAVIORS = {
     { key = "potions",  label = L["Potions"],    tip = L["Drink healing and mana potions when low."] },
     { key = "mimic",    label = L["Mimic"],      tip = L["Copy your consumable use (food, drink, potions) on this bot."] },
     { key = "spread",   label = L["Spread out"], tip = L["Keep distance from nearby party members instead of stacking."] },
+    { key = "hold",     label = L["Hold position"], tip = L["Keep following and fighting, but never run from enemies on its own: no fleeing, kiting or stepping back for casting room. Still steps out of ground effects."], optional = true },
+    { key = "offheal",  label = L["Off-heal"], tip = L["Damage spec: stop attacking and heal an ally who drops low. A spec change sets the spec's default again."], optional = true, spec = "dps" },
+    { key = "offdps",   label = L["Off-DPS"],  tip = L["Healer: attack while nobody needs healing; healing always wins. A spec change sets the spec's default again."], optional = true, spec = "heal" },
+    { key = "noblink",  label = L["No dungeon Blink"], tip = L["Never cast Blink inside dungeons and raids, where it can land in the next pack. Blink still works outdoors."], optional = true, class = 8 },
 }
 TB.C.NO_MANA_CLASSES = { [1] = true, [4] = true } -- Warrior, Rogue
+
+-- Shaman totems (`.bot totem <bot> <slot> <totem>`): the slots, each slot's
+-- totems in the server's order, and the drop modes.
+TB.C.TOTEM_SLOTS = { "earth", "fire", "water", "air" }
+TB.C.TOTEM_SLOT_LABELS = { earth = L["Earth"], fire = L["Fire"], water = L["Water"], air = L["Air"] }
+TB.C.TOTEMS = {
+    earth = { "stoneclaw totem", "stoneskin totem", "earthbind totem", "strength of earth totem", "tremor totem" },
+    fire  = { "searing totem", "magma totem", "fire nova totem", "flametongue totem", "fire resistance totem",
+              "frost resistance totem" },
+    water = { "healing stream totem", "mana spring totem", "mana tide totem", "poison cleansing totem",
+              "disease cleansing totem", "fire resistance totem" },
+    air   = { "windfury totem", "grace of air totem", "tranquil air totem", "grounding totem", "windwall totem",
+              "nature resistance totem" },
+}
+TB.C.TOTEM_MODES = { "auto", "prepull", "manual" }
+TB.C.TOTEM_MODE_LABELS = { auto = L["Auto"], prepull = L["Before the pull"], manual = L["Only on order"] }
+-- Presets a fresh install starts with; the player can overwrite or delete them.
+TB.C.TOTEM_PRESETS_DEFAULT = {
+    { name = "Melee group", earth = "strength of earth totem", fire = "searing totem",
+      water = "mana spring totem", air = "windfury totem" },
+    { name = "Caster group", earth = "stoneskin totem", fire = "searing totem",
+      water = "mana spring totem", air = "grace of air totem" },
+}
+
+-- Paladin blessings (`.bot blessing <bot> <class> <blessing|auto>`): the
+-- blessings, their icons, and the class words in grid order.
+TB.C.BLESSINGS = { "might", "wisdom", "kings", "salvation", "sanctuary", "light" }
+TB.C.BLESSING_LABELS = { might = L["Might"], wisdom = L["Wisdom"], kings = L["Kings"], salvation = L["Salvation"],
+    sanctuary = L["Sanctuary"], light = L["Light"] }
+TB.C.BLESSING_ICONS = {
+    might = "Interface\\Icons\\Spell_Holy_FistOfJustice",
+    wisdom = "Interface\\Icons\\Spell_Holy_SealOfWisdom",
+    kings = "Interface\\Icons\\Spell_Magic_MageArmor",
+    salvation = "Interface\\Icons\\Spell_Holy_SealOfSalvation",
+    sanctuary = "Interface\\Icons\\Spell_Nature_LightningShield",
+    light = "Interface\\Icons\\Spell_Holy_PrayerOfHealing02",
+}
+TB.C.BLESSING_CLASSES = {
+    { word = "warrior", id = 1 }, { word = "paladin", id = 2 }, { word = "hunter", id = 3 },
+    { word = "rogue", id = 4 }, { word = "priest", id = 5 }, { word = "shaman", id = 7 },
+    { word = "mage", id = 8 }, { word = "warlock", id = 9 }, { word = "druid", id = 11 },
+}
 
 -- Movement labels for the TBM:BOTSTATE "move" field.
 TB.C.MOVEMENT_LABELS = {

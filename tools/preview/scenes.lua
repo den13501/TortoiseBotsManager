@@ -58,39 +58,41 @@ Mock.world.party = {
     { name = "Thalgrim", class = "Warrior", level = 60 },
     { name = "Seraphine", class = "Priest", level = 60 },
     { name = "Vexmora", class = "Mage", level = 59 },
-    { name = "Bramblewood", class = "Druid", level = 60 },
+    { name = "Murlok", class = "Tidecaller", level = 60 },
 }
 local gw = Mock.frames["TortoiseBotsManagerGroupWatcher"]
 if gw and gw.scripts.OnEvent then event = "PARTY_MEMBERS_CHANGED"; this = gw; pcall(gw.scripts.OnEvent, gw) end
 feed({
-    "TBM:ROSTER_BEGIN|9",
-    "TBM:ROSTER|101|Thalgrim|1|online|1|Elwynn Forest",
-    "TBM:ROSTER|102|Seraphine|5|online|1|Elwynn Forest",
-    "TBM:ROSTER|103|Vexmora|8|online|1|Elwynn Forest",
-    "TBM:ROSTER|104|Bramblewood|11|online|1|Elwynn Forest",
-    "TBM:ROSTER|105|Kaelthor|2|online|0|Ironforge",
-    "TBM:ROSTER|106|Nightwhisper|4|offline|0|Stormwind City",
-    "TBM:ROSTER|107|Grimtotem|7|offline|0|Orgrimmar",
-    "TBM:ROSTER|108|Felbrand|9|online|0|Duskwood",
-    "TBM:ROSTER|109|Arrowind|3|offline|0|Westfall",
+    "TBM:ROSTER_BEGIN|10",
+    "TBM:ROSTER|101|Thalgrim|1|online|1|Elwynn Forest|Warrior",
+    "TBM:ROSTER|102|Seraphine|5|online|1|Elwynn Forest|Priest",
+    "TBM:ROSTER|103|Vexmora|8|online|1|Elwynn Forest|Mage",
+    "TBM:ROSTER|104|Murlok|12|online|1|Elwynn Forest|Tidecaller",
+    "TBM:ROSTER|105|Bramblewood|11|online|0|Elwynn Forest|Druid",
+    "TBM:ROSTER|106|Kaelthor|2|online|0|Ironforge|Paladin",
+    "TBM:ROSTER|107|Nightwhisper|4|offline|0|Stormwind City|Rogue",
+    "TBM:ROSTER|108|Grimtotem|7|offline|0|Orgrimmar|Shaman",
+    "TBM:ROSTER|109|Felbrand|9|online|0|Duskwood|Warlock",
+    "TBM:ROSTER|110|Arrowind|3|offline|0|Westfall|Hunter",
     "TBM:ROSTER_END",
     "TBM:ALTBOTS|Felbrand",
     "TBM:BOTSTATE_BEGIN|4",
-    "TBM:BOTSTATE|Thalgrim|move=follow,loot=on,aoe=on,autocc=off,savemana=off,boost=on,threat=on,potions=on,specs=protection",
-    "TBM:BOTSTATE|Seraphine|move=follow,loot=on,aoe=on,autocc=off,savemana=on,boost=on,threat=on,potions=on,specs=holy",
-    "TBM:BOTSTATE|Vexmora|move=follow,loot=on,aoe=on,autocc=on,savemana=off,boost=on,threat=on,potions=on,specs=frost",
-    "TBM:BOTSTATE|Bramblewood|move=follow,loot=off,aoe=on,autocc=off,savemana=off,boost=on,threat=on,potions=on,specs=restoration",
+    "TBM:BOTSTATE|Thalgrim|move=follow,loot=on,aoe=on,autocc=off,savemana=off,boost=on,threat=on,potions=on,hold=off,specs=protection",
+    "TBM:BOTSTATE|Seraphine|move=follow,loot=on,aoe=on,autocc=off,savemana=on,boost=on,threat=on,potions=on,hold=on,specs=holy",
+    "TBM:BOTSTATE|Vexmora|move=follow,loot=on,aoe=on,autocc=on,savemana=off,boost=on,threat=on,potions=on,hold=off,noblink=on,specs=frost",
+    "TBM:BOTSTATE|Bramblewood|move=follow,loot=off,aoe=on,autocc=off,savemana=off,boost=on,threat=on,potions=on,hold=off,specs=restoration",
     "TBM:BOTSTATE_END",
     "TBM:CC_ASSIGN_BEGIN|1",
     "TBM:CC_ASSIGN|Vexmora|moon",
     "TBM:CC_ASSIGN_END",
-    "TBM:CLAIMED_BEGIN|6",
-    "TBM:CLAIMED|201|Goldie|1|60|online|0|Ironforge|1",
-    "TBM:CLAIMED|202|Silverleaf|5|45|online|1|Duskwood|0",
-    "TBM:CLAIMED|203|Ironhide|2|60|online|0|Blackrock Mountain|1",
-    "TBM:CLAIMED|204|Mistral|7|52|offline|0|Tanaris|0",
-    "TBM:CLAIMED|205|Stitchwork|9|60|online|0|Stormwind City|1",
-    "TBM:CLAIMED|206|Fenwick|3|38|offline|0|Stranglethorn Vale|0",
+    "TBM:CLAIMED_BEGIN|7",
+    "TBM:CLAIMED|201|Goldie|1|60|online|0|Ironforge|1|-|-|Warrior",
+    "TBM:CLAIMED|202|Silverleaf|5|45|online|1|Duskwood|0|-|-|Priest",
+    "TBM:CLAIMED|203|Ironhide|2|60|online|0|Blackrock Mountain|1|-|-|Paladin",
+    "TBM:CLAIMED|204|Tidefin|12|58|online|0|Stranglethorn Vale|0|-|-|Tidecaller",
+    "TBM:CLAIMED|205|Mistral|7|52|offline|0|Tanaris|0|-|-|Shaman",
+    "TBM:CLAIMED|206|Stitchwork|9|60|online|0|Stormwind City|1|-|-|Warlock",
+    "TBM:CLAIMED|207|Fenwick|3|38|offline|0|Stranglethorn Vale|0|-|-|Hunter",
     "TBM:CLAIMED_END",
     "TBM:ORDER_ACCESS|2|Raider|1,2|-|1|1",
     "TBM:ORDER_BEGIN|2",
@@ -190,7 +192,7 @@ local function scene(name, fn)
 end
 
 local function hideSatellites()
-    for _, n in ipairs({ "CloseBotPanel", "CloseRunWindow", "CloseOrderWindow", "CloseServerInfo", "CloseSettings", "CloseNpc", "CloseVault" }) do
+    for _, n in ipairs({ "CloseBotPanel", "CloseRunWindow", "CloseOrderWindow", "CloseServerInfo", "CloseSettings", "CloseNpc", "CloseVault", "CloseBlessings" }) do
         if TB[n] then pcall(TB[n]) end
     end
     if TB.ccMenu then TB.ccMenu:Hide() end
@@ -213,6 +215,12 @@ local function tab(name, target)
 end
 
 scene("fight", function() tab("actions", nil); dump("fight", { main }, "Fight tab, no target") end)
+scene("fight-engage", function()
+    feed({ "TBM:CAPS|pull-seconds,flee,inventory,behavior,downtime,claimed-roster,guild-orders,professions,dungeon-run,loot-log,service,engage" })
+    tab("actions", nil)
+    dump("fight-engage", { main }, "Fight tab on a server with the Engage hold")
+    feed({ "TBM:CAPS|pull-seconds,flee,inventory,behavior,downtime,claimed-roster,guild-orders,professions,dungeon-run,loot-log,service" })
+end)
 scene("fight-target", function()
     tab("actions", { name = "Defias Pillager", player = false, class = "Rogue" })
     dump("fight-target", { main }, "Fight tab with an enemy target")
@@ -257,6 +265,18 @@ scene("dungeon", function()
     tab("dungeon", nil)
     dump("dungeon", { main, TB.runWindow }, "Dungeon tab and run window")
 end)
+scene("run", function()
+    tab("dungeon", nil)
+    TB.OpenRunWindow()
+    feed({
+        "Dungeon plans: deadmines (map 36, 28 steps), uldaman (map 70, 41 steps, 2 not supported yet), stratholme (map 329, 54 steps)",
+        "TBM:ACTION_ACK|run list|plans|3|-",
+        "TBM:RUN|uldaman|running|12/41|1|pull|fighting|Clearing Stonevault room",
+    })
+    tick(1)
+    dump("run", { main, TB.runWindow }, "Dungeon run window")
+    TB.CloseRunWindow()
+end)
 scene("raid", function()
     Mock.world.raid = 12
     tab("raid", nil)
@@ -298,6 +318,156 @@ for _, view in ipairs({ "gear", "bags", "behavior", "spells", "profs" }) do
         dump("panel-" .. view, { main, TB.botPanel }, "Bot panel: " .. view)
     end)
 end
+scene("panel-totems", function()
+    tab("party", nil)
+    feed({
+        "TBM:BOTSTATE|Grimtotem|move=follow,loot=on,aoe=on,hold=off",
+        "TBM:TOTEM|Grimtotem|earth=strength of earth totem,fire=searing totem,water=mana spring totem,air=windfury totem,"
+            .. "mode=auto,known=stoneskin totem+strength of earth totem+searing totem+mana spring totem+windfury totem",
+    })
+    TB.OpenBotPanel("Grimtotem", "behavior")
+    tick(1)
+    dump("panel-totems", { main, TB.botPanel }, "Bot panel: behaviour of a shaman with the totem picker")
+end)
+scene("panel-choices", function()
+    tab("party", nil)
+    feed({
+        "TBM:CAPS|pull-seconds,flee,inventory,behavior,downtime,claimed-roster,guild-orders,professions,dungeon-run,loot-log,service,choice",
+        "TBM:BOTSTATE|Kaelthor|move=follow,loot=on,hold=on",
+        "TBM:CHOICE|Kaelthor|aura=devotion aura,known=devotion aura+retribution aura+shadow resistance",
+    })
+    table.insert(Mock.world.party, { name = "Kaelthor", class = "Paladin", level = 60 })
+    TB.OpenBotPanel("Kaelthor", "behavior")
+    tick(1)
+    dump("panel-choices", { main, TB.botPanel }, "Bot panel: behaviour of a paladin with the class picker")
+    table.remove(Mock.world.party)
+end)
+scene("bots", function()
+    tab("party", nil)
+    TB.OpenBots()
+    tick(1)
+    dump("bots", { main, TB.botsWindow }, "Party tab with the Bots overview")
+end)
+-- Class controls: off-spec switch in the Bots class column, focus marks,
+-- and a hunter's Aspect + Sting pickers with the focus button.
+local function classControlsParty()
+    -- A party holds four bots: Nightveil and Swiftarrow stand in for Thalgrim and Bramblewood.
+    local saved = Mock.world.party
+    Mock.world.party = {}
+    for _, member in ipairs(saved) do
+        if member.name == "Seraphine" or member.name == "Vexmora" then table.insert(Mock.world.party, member) end
+    end
+    table.insert(Mock.world.party, { name = "Nightveil", class = "Priest", level = 60 })
+    table.insert(Mock.world.party, { name = "Swiftarrow", class = "Hunter", level = 60 })
+    feed({
+        "TBM:CAPS|pull-seconds,flee,inventory,behavior,downtime,claimed-roster,guild-orders,professions,dungeon-run,loot-log,service,choice,focus-mark",
+        "TBM:CC_ASSIGN_BEGIN|1",
+        "TBM:CC_ASSIGN|Vexmora|moon",
+        "TBM:CC_ASSIGN_END",
+        "TBM:BOTSTATE|Thalgrim|move=follow,loot=on,aoe=on,autocc=off,hold=off,specs=protection,focus=skull",
+        "TBM:BOTSTATE|Seraphine|move=follow,loot=on,aoe=on,autocc=off,hold=on,offheal=off,offdps=on,specs=holy+offdps,focus=skull",
+        "TBM:BOTSTATE|Vexmora|move=follow,loot=on,aoe=on,autocc=on,hold=off,noblink=on,specs=frost,focus=cross",
+        "TBM:BOTSTATE|Bramblewood|move=follow,loot=off,aoe=on,autocc=off,hold=off,offheal=off,offdps=off,specs=restoration,focus=skull",
+        "TBM:BOTSTATE|Nightveil|move=follow,loot=on,aoe=on,autocc=off,hold=off,offheal=on,offdps=off,specs=shadow+offheal,focus=square",
+        "TBM:BOTSTATE|Swiftarrow|move=follow,loot=on,aoe=on,autocc=off,hold=off,specs=marksmanship,focus=skull",
+        "TBM:CHOICE|Swiftarrow|aspect=auto,known=hawk+monkey+cheetah+pack+wild",
+        "TBM:CHOICE|Swiftarrow|sting=scorpid,known=serpent+scorpid+viper",
+    })
+    return saved
+end
+scene("bots-class-controls", function()
+    local saved = classControlsParty()
+    tab("party", nil)
+    TB.OpenBots()
+    tick(1)
+    dump("bots-class-controls", { main, TB.botsWindow }, "Bots overview with off-spec switch and focus marks")
+    Mock.world.party = saved
+end)
+scene("panel-class-controls", function()
+    local saved = classControlsParty()
+    tab("party", nil)
+    TB.OpenBotPanel("Swiftarrow", "behavior")
+    tick(1)
+    dump("panel-class-controls", { main, TB.botPanel }, "Bot panel: hunter with focus mark, Aspect and Sting")
+    Mock.world.party = saved
+end)
+scene("panel-offheal", function()
+    local saved = classControlsParty()
+    tab("party", nil)
+    TB.OpenBotPanel("Nightveil", "behavior")
+    tick(1)
+    dump("panel-offheal", { main, TB.botPanel }, "Bot panel: Shadow priest with Off-heal")
+    Mock.world.party = saved
+end)
+scene("blessings", function()
+    table.insert(Mock.world.party, { name = "Kaelthor", class = "Paladin", level = 60 })
+    feed({
+        "TBM:CAPS|pull-seconds,flee,inventory,behavior,downtime,claimed-roster,guild-orders,professions,dungeon-run,loot-log,service,blessing,choice,blessing-player",
+        "TBM:BOTSTATE|Kaelthor|move=follow,loot=on",
+        "TBM:CHOICE|Kaelthor|aura=devotion aura,known=devotion aura+retribution aura+concentration aura+shadow resistance aura",
+        "TBM:BLESSING|Kaelthor|warrior=kings,paladin=kings,hunter=might,rogue=might,priest=wisdom,shaman=wisdom,"
+            .. "mage=wisdom,warlock=auto,druid=light,known=might+wisdom+kings+light,players=Valguard:might+Seraphine:kings",
+    })
+    local gw = Mock.frames["TortoiseBotsManagerGroupWatcher"]
+    event = "PARTY_MEMBERS_CHANGED"; this = gw; gw.scripts.OnEvent(gw)
+    tab("party", nil)
+    TB.OpenBlessings()
+    tick(1)
+    dump("blessings", { main, TB.blessingsWindow }, "Party tab with the blessing board (1 paladin)")
+    TB.CloseBlessings()
+    table.remove(Mock.world.party)
+    event = "PARTY_MEMBERS_CHANGED"; this = gw; gw.scripts.OnEvent(gw)
+end)
+scene("blessings-raid", function()
+    local raidRoster = {
+        { name = "Valguard", class = "Warrior" },
+        { name = "Kaelthor", class = "Paladin" },
+        { name = "Sunblade", class = "Paladin" },
+        { name = "Lightward", class = "Paladin" },
+        { name = "Swiftarrow", class = "Hunter" },
+        { name = "Shadeblade", class = "Rogue" },
+        { name = "Seraphine", class = "Priest" },
+        { name = "Grimtotem", class = "Shaman" },
+        { name = "Vexmora", class = "Mage" },
+        { name = "Dreadcoil", class = "Warlock" },
+        { name = "Bramblewood", class = "Druid" },
+    }
+    local realName, realClass = UnitName, UnitClass
+    Mock.world.raid = table.getn(raidRoster)
+    UnitName = function(u)
+        local _, _, idx = string.find(u or "", "^raid(%d+)$")
+        local r = idx and raidRoster[tonumber(idx)]
+        return r and r.name or realName(u)
+    end
+    UnitClass = function(u)
+        local _, _, idx = string.find(u or "", "^raid(%d+)$")
+        local r = idx and raidRoster[tonumber(idx)]
+        if r then return r.class, string.upper(r.class) end
+        return realClass(u)
+    end
+    feed({
+        "TBM:CAPS|pull-seconds,flee,inventory,behavior,downtime,claimed-roster,guild-orders,professions,dungeon-run,loot-log,service,blessing,choice,blessing-player",
+        "TBM:BOTSTATE|Kaelthor|move=follow,loot=on",
+        "TBM:BOTSTATE|Sunblade|move=follow,loot=on",
+        "TBM:BOTSTATE|Lightward|move=follow,loot=on",
+        "TBM:CHOICE|Kaelthor|aura=devotion aura,known=devotion aura+retribution aura+concentration aura",
+        "TBM:CHOICE|Sunblade|aura=concentration aura,known=devotion aura+concentration aura+shadow resistance aura",
+        "TBM:CHOICE|Lightward|aura=auto,known=devotion aura+retribution aura",
+        "TBM:BLESSING|Kaelthor|warrior=might,paladin=wisdom,hunter=might,rogue=might,priest=wisdom,shaman=wisdom,"
+            .. "mage=wisdom,warlock=wisdom,druid=wisdom,known=might+wisdom+kings+salvation+sanctuary+light,players=Valguard:sanctuary+Vexmora:light",
+        "TBM:BLESSING|Sunblade|warrior=kings,paladin=kings,hunter=kings,rogue=kings,priest=kings,shaman=kings,"
+            .. "mage=kings,warlock=kings,druid=kings,known=might+wisdom+kings+salvation+light,players=Valguard:kings",
+        "TBM:BLESSING|Lightward|warrior=auto,paladin=might,hunter=salvation,rogue=salvation,priest=salvation,shaman=might,"
+            .. "mage=salvation,warlock=salvation,druid=might,known=might+wisdom+salvation+light,players=Vexmora:salvation",
+    })
+    tab("party", nil)
+    TB.OpenBlessings()
+    tick(1)
+    dump("blessings-raid", { main, TB.blessingsWindow }, "Blessing board in a 9-class raid (3 paladins)")
+    TB.CloseBlessings()
+    Mock.world.raid = 0
+    UnitName, UnitClass = realName, realClass
+end)
 scene("npc", function()
     tab("party", nil)
     TB.OpenBotPanel("Seraphine", "gear")

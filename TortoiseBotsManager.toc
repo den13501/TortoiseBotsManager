@@ -3,7 +3,7 @@
 ## Notes: Manager for your server-owned TortoiseBots — actions, lifecycle, and roster state.
 ## Author: Sagiroth
 ## X-Website: https://github.com/Sagiroth/TortoiseBotsManager
-## Version: 2.1.3
+## Version: 2.3.2
 ## SavedVariables: TortoiseBotsDB
 
 Locales\Locale.lua
@@ -16,6 +16,12 @@ Roster.lua
 Comms.lua
 UI.lua
 BotPanel.lua
+BotTarget.lua
+BotTotem.lua
+BotBlessing.lua
+BotOverview.lua
+BotChoice.lua
+BotFocus.lua
 BotNpc.lua
 BotVault.lua
 BotRun.lua

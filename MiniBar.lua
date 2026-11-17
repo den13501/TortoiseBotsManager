@@ -25,7 +25,7 @@ local FLY_W = 132
 local FLY_ROWS = 4
 
 local CATEGORIES = {
-    { key = "engage", label = L["Engage"], sections = { "engage" } },
+    { key = "engage", label = L["Combat"], sections = { "engage" } },
     { key = "pull", label = L["Pull & Focus"], sections = { "pull" } },
     { key = "move", label = L["Move"], sections = { "move", "stance" } },
     { key = "switch", label = L["Party switches"], sections = { "switch" } },
@@ -689,6 +689,7 @@ function TB.SetMode(mode)
         if TB.CloseNpc then TB.CloseNpc() end
         if TB.CloseRunWindow then TB.CloseRunWindow() end
         if TB.CloseServerInfo then TB.CloseServerInfo() end
+        if TB.CloseBlessings then TB.CloseBlessings() end
         if TB.frame then TB.frame:Hide() end
         bar:Show()
         TB.RefreshMiniBar()

@@ -212,7 +212,8 @@ local itemCache = {}
 function GetItemInfo(id)
     local item = itemCache[id]
     if not item then return nil end
-    return item.name, "item:" .. id .. ":0:0:0", item.quality or 1, 1, "Armor", "Cloth", 1, "", item.texture
+    return item.name, "item:" .. id .. ":0:0:0", item.quality or 1, 1,
+        item.itemType or "Armor", item.subType or "Cloth", 1, item.equipLoc or "", item.texture
 end
 function UnitLevel(unit) return 60 end
 function UnitClass(unit)
@@ -243,6 +244,12 @@ for _, file in ipairs({
     "Comms.lua",
     "UI.lua",
     "BotPanel.lua",
+    "BotTotem.lua",
+    "BotTarget.lua",
+    "BotBlessing.lua",
+    "BotOverview.lua",
+    "BotChoice.lua",
+    "BotFocus.lua",
     "BotNpc.lua",
     "BotVault.lua",
     "BotRun.lua",
@@ -455,6 +462,64 @@ TB.OnSystemMessage("TBM:ROSTER_END")
 -- Class colors and status badge
 local warriorColor = TB.GetClassColor(1)
 assert(warriorColor and warriorColor.hex == "ffc79c6e", "Warrior class color must match Tortoise palette")
+local unknownColor = TB.GetClassColor(12)
+assert(unknownColor and unknownColor.hex == "ffebe6d6", "Unknown class color must use neutral fallback")
+
+-- Unknown (custom) class handling: placeholder icon, server name, UnitClass fallback, "Unknown class"
+do
+    local shown, texPath
+    local fakeTex = {
+        SetTexture = function(_, p) texPath = p end,
+        SetTexCoord = function() end,
+        Show = function() shown = true end,
+        Hide = function() shown = false end,
+    }
+    local knownOk = TB.SetClassIcon(fakeTex, 1)
+    assert(knownOk and shown and texPath == TB.C.CLASS_ICON_FILE, "known class must use class icon atlas")
+    local unknownOk = TB.SetClassIcon(fakeTex, 12)
+    assert(not unknownOk and shown and texPath == "Interface\\Icons\\INV_Misc_QuestionMark",
+        "unknown class must show question mark placeholder instead of hiding")
+
+    -- With server-sent class name on ROSTER and CLAIMED
+    TB.OnSystemMessage("TBM:ROSTER_BEGIN|3")
+    TB.OnSystemMessage("TBM:ROSTER|101|Alpha|1|online|0|map:1,zone:2,area:3|IgnoreMe")
+    TB.OnSystemMessage("TBM:ROSTER|102|Murlok|12|online|0|map:1,zone:2,area:3|Tidecaller")
+    TB.OnSystemMessage("TBM:ROSTER|103|Wanderer|12|offline|0|-")
+    TB.OnSystemMessage("TBM:ROSTER_END")
+    assert(TB.GetRosterEntry("Alpha").className == "Warrior",
+        "known class must keep addon class name even when server sends a name")
+    assert(TB.GetRosterEntry("Murlok").className == "Tidecaller",
+        "unknown class must use server-sent class name")
+    assert(TB.GetRosterEntry("Wanderer").className == "Unknown class",
+        "unknown class without server name or party unit must fall back to Unknown class")
+
+    -- Without server-sent name, fall back to UnitClass when in party
+    local realParty, realClass = partyMembers, partyClassName
+    partyMembers = { "Wanderer" }
+    partyClassName = "Runemaster"
+    assert(TB.GetClassName(12, nil, "Wanderer") == "Runemaster",
+        "unknown class without server name must fall back to UnitClass when in party")
+    partyMembers, partyClassName = realParty, realClass
+
+    -- Claimed guild row with trailing class name
+    TB.OnSystemMessage("TBM:CLAIMED_BEGIN|2")
+    TB.OnSystemMessage("TBM:CLAIMED|201|Tidefin|12|60|online|0|Ironforge|1|-|0|Tidecaller")
+    TB.OnSystemMessage("TBM:CLAIMED|202|NoName|12|55|offline|0|-|0|-|0")
+    TB.OnSystemMessage("TBM:CLAIMED_END")
+    assert(TB.GetClaimedEntry("Tidefin").className == "Tidecaller",
+        "claimed bot with unknown class must use server-sent class name")
+    assert(TB.GetClaimedEntry("NoName").className == "Unknown class",
+        "claimed bot with unknown class and no server name must fall back to Unknown class")
+
+    -- Restore canonical snapshots
+    TB.OnSystemMessage("TBM:CLAIMED_BEGIN|0")
+    TB.OnSystemMessage("TBM:CLAIMED_END")
+    TB.OnSystemMessage("TBM:ROSTER_BEGIN|3")
+    TB.OnSystemMessage("TBM:ROSTER|101|Alpha|1|online|0|map:1,zone:2,area:3")
+    TB.OnSystemMessage("TBM:ROSTER|102|Bravo|8|offline|0|-")
+    TB.OnSystemMessage("TBM:ROSTER|103|Gamma|11|online|1|map:4,zone:5,area:6")
+    TB.OnSystemMessage("TBM:ROSTER_END")
+end
 local badge = TB.StatusBadge(TB.GetState("Alpha"), false)
 assert(string.find(badge, "Online"), "Status badge for online state must display Online")
 
@@ -1017,8 +1082,8 @@ now = now + 1
 local beforeRoleCmd = table.getn(sent)
 TB.partyFrame.rows[2].roleButtons[3].scripts.OnClick()
 assert(TortoiseBotsDB.botRoles["Priestbot"] == "dps", "Priestbot role must be stored as dps")
-assert(table.getn(sent) == beforeRoleCmd + 1 and sent[table.getn(sent)] == ".bot strategy +shadow,-holy,-discipline,-offdps Priestbot",
-    "Clicking Shadow role must send Playerbot strategy command")
+assert(table.getn(sent) == beforeRoleCmd + 1 and sent[table.getn(sent)] == ".bot role Priestbot shadow",
+    "Clicking Shadow role must send the server spec id so the whole kit is rebuilt")
 assert(TB.partyFrame.rows[2].roleButtons[3].isActive, "Selected Shadow button must be filled gold")
 
 -- Tank designation uses the explicit role command (forced role + pull kit).
@@ -1032,25 +1097,41 @@ now = now + 1
 local beforeTankCmd = table.getn(sent)
 TB.partyFrame.rows[2].roleButtons[1].scripts.OnClick()
 assert(TortoiseBotsDB.botRoles["Tankbot"] == "tank", "Tankbot role must be stored as tank")
-assert(table.getn(sent) == beforeTankCmd + 1 and sent[table.getn(sent)] == ".bot role Tankbot tank",
-    "Clicking Tank role must send the explicit role command")
--- Demotion clears the stale forced tank before the spec strategy is applied.
--- Two commands in the same tick: first sends, second queues on SEND_DELAY.
+assert(table.getn(sent) == beforeTankCmd + 1 and sent[table.getn(sent)] == ".bot role Tankbot protection",
+    "Clicking Tank role must send the Protection spec id")
+-- Demotion is one spec command too: the spec id sets the forced role.
 now = now + 1
 local beforeDemoteCmd = table.getn(sent)
 TB.partyFrame.rows[2].roleButtons[2].scripts.OnClick()
 assert(TortoiseBotsDB.botRoles["Tankbot"] == "dps", "Tankbot role must be stored as dps")
 assert(table.getn(sent) == beforeDemoteCmd + 1
-    and sent[table.getn(sent)] == ".bot role Tankbot clear",
-    "Demotion from Tank must clear the forced role first")
-now = now + 1
-local queueFrame = frames["TortoiseBotsManagerQueueFrame"]
-assert(queueFrame, "demotion spec strategy must queue behind the throttle")
-this, arg1 = queueFrame, 0.1
-queueFrame.scripts.OnUpdate(queueFrame)
-assert(table.getn(sent) == beforeDemoteCmd + 2
-    and sent[table.getn(sent)] == ".bot strategy +arms,-protection,-fury Tankbot",
-    "Demotion spec strategy must follow after the throttle clears")
+    and sent[table.getn(sent)] == ".bot role Tankbot arms",
+    "Demotion from Tank sends the Arms spec id only")
+
+-- Every role row maps to a spec id the server knows for that class
+-- (kSpecRows in the module); shaman Enh Tank keeps the plain tank role.
+do
+    local serverSpecs = {
+        [1] = { arms = true, fury = true, protection = true },
+        [2] = { holy = true, protection = true, retribution = true },
+        [3] = { bm = true, mm = true, survival = true },
+        [4] = { assa = true, combat = true, subtlety = true },
+        [5] = { discipline = true, holy = true, shadow = true, hybrid = true },
+        [7] = { ele = true, enh = true, restoration = true, tank = true },
+        [8] = { arcane = true, fire = true, frost = true },
+        [9] = { affliction = true, demonology = true, destruction = true },
+        [11] = { balance = true, boomkin = true, cat = true, bear = true, restoration = true },
+    }
+    for classId, roles in pairs(TB.C.CLASS_ROLES) do
+        for _, role in ipairs(roles) do
+            assert(role.spec and serverSpecs[classId] and serverSpecs[classId][role.spec],
+                "role " .. role.id .. " of class " .. classId .. " must map to a server spec id")
+        end
+    end
+    assert(TB.Roles.FindRole(7, "tank").spec == "tank" and TB.Roles.FindRole(11, "tank").spec == "bear"
+        and TB.Roles.FindRole(5, "disc").spec == "discipline" and TB.Roles.FindRole(11, "boomkin").spec == "boomkin",
+        "explicit TBM id to server spec id map")
+end
 partyClassName = "Priest"
 partyMembers = { "Priestbot" }
 TB.RefreshPartyView()
@@ -1469,6 +1550,7 @@ for _, id in ipairs({ "attack", "stop", "interrupt", "flee" }) do
         "engage control " .. id .. " must fit the 360px content")
 end
 assert(cardBottom(TB.actionButtons.endPull, fightTops.pull) >= -360, "end pull must fit the 360px content")
+assert(cardBottom(TB.actionButtons.engage, fightTops.pull) >= -360, "engage must fit the 360px content")
 -- Release follows the party's death state.
 TB.Refresh()
 assert(not TB.actionButtons.release.enabled, "Release is idle while everyone lives")
@@ -1596,7 +1678,7 @@ assert(menu.third.visible and menu.third.text == "Use", "bag items offer Use")
 now = now + 1
 this = menu.third
 menu.third.scripts.OnClick(menu.third)
-assert(lastAddon() == "command Alpha u |Hitem:159:0:0:0|h[Refreshing Spring Water]|h", "Use must send the item link")
+assert(lastAddon() == "command Alpha u |cffffffff|Hitem:159:0:0:0|h[Refreshing Spring Water]|h|r", "Use must send the item link")
 this = junk
 junk.scripts.OnClick(junk)
 now = now + 1
@@ -1631,10 +1713,10 @@ assert(table.getn(addonSent) == beforeDestroy, "Destroy must not send before the
 assert(lastPopupShown == "TORTOISEBOTSMANAGER_DESTROY_ITEM", "Destroy must ask first")
 assert(StaticPopupDialogs["TORTOISEBOTSMANAGER_DESTROY_ITEM"] ~= nil, "destroy dialog must exist")
 assert(StaticPopupDialogs["TORTOISEBOTSMANAGER_DESTROY_ITEM"].text ==
-    "Destroy |Hitem:159:0:0:0|h[Refreshing Spring Water]|h on Alpha?\n\nThis cannot be undone.",
+    "Destroy |cffffffff|Hitem:159:0:0:0|h[Refreshing Spring Water]|h|r on Alpha?\n\nThis cannot be undone.",
     "the confirm must name the item with a single clean link")
 StaticPopupDialogs["TORTOISEBOTSMANAGER_DESTROY_ITEM"].OnAccept()
-assert(lastAddon() == "command Alpha destroy |Hitem:159:0:0:0|h[Refreshing Spring Water]|h",
+assert(lastAddon() == "command Alpha destroy |cffffffff|Hitem:159:0:0:0|h[Refreshing Spring Water]|h|r",
     "confirming Destroy must send the item link")
 -- P9: Use on an uncached item tells the player and sends once cached.
 itemCache[159] = nil
@@ -1647,7 +1729,7 @@ menu.third.scripts.OnClick(menu.third)
 assert(table.getn(addonSent) == beforeUse, "Use on an uncached item must not send silently")
 itemCache[159] = { name = "Refreshing Spring Water", quality = 1, texture = "Interface\\Icons\\INV_Drink_07" }
 TB.botPanel.scripts.OnUpdate(TB.botPanel)
-assert(lastAddon() == "command Alpha u |Hitem:159:0:0:0|h[Refreshing Spring Water]|h",
+assert(lastAddon() == "command Alpha u |cffffffff|Hitem:159:0:0:0|h[Refreshing Spring Water]|h|r",
     "Use must send once the item is cached")
 -- P9: Upkeep and Gear up disable while the bot is offline, like Trade.
 TB.OpenBotPanel("Zed", "bags")
@@ -2061,7 +2143,7 @@ assert(not TB.botVault.rows[2].visible, "empty vault rows stay hidden")
 now = now + 1
 this = TB.botVault.rows[1]
 TB.botVault.rows[1].scripts.OnClick(TB.botVault.rows[1])
-assert(lastAddon() == "command Alpha bank -|Hitem:1234:0:0:0|h[Linen Cloth]|h",
+assert(lastAddon() == "command Alpha bank -|cffffffff|Hitem:1234:0:0:0|h[Linen Cloth]|h|r",
     "clicking a bank row withdraws it by link")
 TB.SetVaultPending("Alpha", false)
 now = now + 1
@@ -2376,6 +2458,30 @@ TB.OnSystemMessage("TBM:CLAIMED_END")
 assert(table.getn(TB.GetClaimedBots()) == 1 and TB.GetClaimedBots()[1].name == "Future"
     and TB.ClaimedProfsLine(TB.GetClaimedBots()[1]) == "Enchanting 300",
     "fields a newer server appends are ignored")
+-- Own alt rows: the trailing alt flag marks them, the order window asks
+-- before it opens for one, and a claimed bot opens without asking.
+TB.OnSystemMessage("TBM:CAPS|pull-seconds,flee,inventory,behavior,claimed-roster,guild-orders")
+TB.OnSystemMessage("TBM:CLAIMED_BEGIN|2")
+TB.OnSystemMessage("TBM:CLAIMED|305|Guildy|1|60|online|0|Ironforge|1|-|0")
+TB.OnSystemMessage("TBM:CLAIMED|306|Myalt|8|40|online|0|Ironforge|0|-|1")
+TB.OnSystemMessage("TBM:CLAIMED_END")
+assert(TB.GetClaimedEntry("Myalt").alt == true, "alt flag 1 marks the player's own alt")
+assert(not TB.GetClaimedEntry("Guildy").alt, "alt flag 0 is a claimed bot")
+lastPopupShown = nil
+assert(TB.OpenOrderWindow("Myalt") == false, "the order window waits for the alt confirmation")
+assert(lastPopupShown == "TORTOISEBOTSMANAGER_ALT_ORDER", "opening an order for an alt asks first")
+assert(TB.GetOrderWindowBot() ~= "Myalt", "no order window before the answer")
+StaticPopupDialogs["TORTOISEBOTSMANAGER_ALT_ORDER"].OnAccept()
+assert(TB.GetOrderWindowBot() == "Myalt", "Yes opens the order window for the alt")
+TB.CloseOrderWindow()
+lastPopupShown = nil
+assert(TB.OpenOrderWindow("Guildy") == true and lastPopupShown == nil, "a claimed bot opens without asking")
+TB.CloseOrderWindow()
+do
+    local labels = {}
+    TB.BuildGuildRowMenu("Myalt", function(item) table.insert(labels, item.text) end)
+    for _, label in ipairs(labels) do assert(label ~= "Release", "an alt has no Release entry") end
+end
 -- Back to the original rows for the UI block below.
 TB.OnSystemMessage("TBM:CLAIMED_BEGIN|3")
 TB.OnSystemMessage("TBM:CLAIMED|201|Goldie|1|60|online|0|Ironforge|1")
@@ -5591,6 +5697,15 @@ dofile(root .. "/tests/altsum_tests.lua")({
 
 dofile(root .. "/tests/geometry_tests.lua")()
 
+dofile(root .. "/tests/community_tests.lua")({
+    sent = sent,
+    frames = frames,
+    advanceTime = function(dt) now = now + (dt or 1) end,
+    setTarget = function(exists, name) targetExists = exists; targetNameValue = name end,
+    setParty = function(members, className) partyMembers = members or {}; partyClassName = className or "Priest" end,
+    getParty = function() return partyMembers, partyClassName end,
+})
+
 -- A newer server may append fields to any line: older addons ignore them.
 do
     assert(TB.ParseOrderItemLine("TBM:ORDER_ITEM|2319|Medium Leather|1|drop,skin|16|393:100|ok|Ashenvale|50|4|leather|extra"),
@@ -5667,6 +5782,86 @@ do
     StaticPopupDialogs, StaticPopup_Show = TB._t.dialogs, TB._t.show
     TB._t, TB._compatShown, TortoiseBotsDB.compatDismissed = nil, nil, nil
 end
+
+-- ── BotPanel equipped bag slots (#89) ────────────────────────────────────────
+(function()
+    local savedParty = partyMembers
+    partyMembers = { "Alpha" }
+    TB.OnSystemMessage("TBM:TRANSPORT|party")
+    now = now + 5
+    itemCache[14046] = { name = "Runecloth Bag", quality = 1, itemType = "Container", subType = "Bag",
+        equipLoc = "INVTYPE_BAG", texture = "Interface\\Icons\\INV_Misc_Bag_10" }
+    itemCache[18714] = { name = "Ancient Sinew Wrapped Lamina", quality = 4, itemType = "Quiver", subType = "Quiver",
+        equipLoc = "INVTYPE_BAG", texture = "Interface\\Icons\\INV_Misc_Quiver_03" }
+    itemCache[4500] = { name = "Traveler's Backpack", quality = 2, itemType = "Container", subType = "Bag",
+        equipLoc = "INVTYPE_BAG", texture = "Interface\\Icons\\INV_Misc_Bag_08" }
+
+    TB.OpenBotPanel("Alpha", "bags")
+    TB.OnSystemMessage("TBM:INV_BEGIN|Alpha|100")
+    TB.OnSystemMessage("TBM:INV_EQ|19|14046|0|0|14")
+    TB.OnSystemMessage("TBM:INV_EQ|20|18714|0|0|18")
+    TB.OnSystemMessage("TBM:INV_ITEM|255|23|4500|1|e")
+    TB.OnSystemMessage("TBM:INV_END|Alpha|20|40")
+
+    local eq = TB.botPanel.equippedBagButtons
+    assert(eq and table.getn(eq) == 4, "4 equipped bag slots on Bags tab")
+    assert(eq[1].nameText.text == "Runecloth Bag" and eq[1].slotsText.text == "14 slots",
+        "equipped bag 1 shows name and slot count")
+    assert(eq[2].nameText.text == "Ancient Sinew Wrapped Lamina" and eq[2].slotsText.text == "18 slots",
+        "hunter quiver shows in bag slot 2 with slot count")
+    assert(eq[3].nameText.text == "Bag 3" and eq[3].slotsText.text == "Empty / not reported",
+        "unreported or empty bag slot shows placeholder")
+
+    local savedNumSlots, savedLink, savedInfo = GetContainerNumSlots, GetContainerItemLink, GetContainerItemInfo
+    local savedPickup, savedClickTrade, savedCursorHas = PickupContainerItem, ClickTradeButton, CursorHasItem
+    GetContainerNumSlots = function(b) return b == 0 and 2 or 0 end
+    GetContainerItemLink = function(b, s)
+        if b == 0 and s == 1 then return "|cffffffff|Hitem:4500:0:0:0|h[Traveler's Backpack]|h|r" end
+        return nil
+    end
+    GetContainerItemInfo = function() return nil, 1, false end
+    local picked, traded = nil, nil
+    PickupContainerItem = function(b, s) picked = { b, s } end
+    ClickTradeButton = function(idx) traded = idx end
+    CursorHasItem = function() return false end
+
+    local rows = {}
+    TB.BuildBagSlotMenu("Alpha", 19, function(info) table.insert(rows, info) end)
+    local giveBtn, equipBtn, unequipBtn
+    for _, r in ipairs(rows) do
+        if r.text and string.find(r.text, "Traveler's Backpack", 1, true) and r.func then
+            if not giveBtn then giveBtn = r else equipBtn = r end
+        elseif r.text == "Unequip bag" then
+            unequipBtn = r
+        end
+    end
+    assert(giveBtn and equipBtn and unequipBtn, "bag slot menu offers Give a bag, Equip this bag, and Unequip bag")
+
+    now = now + 1
+    giveBtn.func()
+    assert(lastAddon() == "item Alpha trade", "Give a bag opens trade with the bot")
+    local tradeWatcher = frames["TortoiseBotsManagerTradeWatcher"]
+    local savedUnitName = UnitName
+    UnitName = function(u) return u == "NPC" and "Alpha" or savedUnitName(u) end
+    event = "TRADE_SHOW"
+    tradeWatcher.scripts.OnEvent(tradeWatcher)
+    UnitName = savedUnitName
+    assert(picked and picked[1] == 0 and picked[2] == 1 and traded == 1,
+        "TRADE_SHOW places the picked player bag into trade slot 1")
+
+    now = now + 1
+    equipBtn.func()
+    assert(lastAddon() == "item Alpha equip 255 23", "Equip this bag sends item equip for carried bag")
+
+    now = now + 1
+    unequipBtn.func()
+    assert(lastAddon() == "item Alpha unequip 255 19", "Unequip bag sends item unequip for slot 19")
+
+    GetContainerNumSlots, GetContainerItemLink, GetContainerItemInfo = savedNumSlots, savedLink, savedInfo
+    PickupContainerItem, ClickTradeButton, CursorHasItem = savedPickup, savedClickTrade, savedCursorHas
+    partyMembers = savedParty
+    TB.CloseBotPanel()
+end)()
 
 dofile(root .. "/tests/phase0_tests.lua")()
 

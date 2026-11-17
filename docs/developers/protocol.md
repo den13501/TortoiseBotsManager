@@ -28,6 +28,7 @@ The module owns the protocol; this page lists what the addon uses. The full gram
 | Token | Gates |
 | :--- | :--- |
 | `pull-seconds` | Pull and pullback timers (without it, plain `pull` / `pullback`) |
+| `engage` | "My pull" button on the Fight tab (`.bot action engage`; the success ACK carries an empty executor) |
 | `flee` | Flee button and key binding |
 | `inventory` | Bag icons and the bot panel |
 | `claimed-roster` | Guild tab data |
@@ -36,6 +37,10 @@ The module owns the protocol; this page lists what the addon uses. The full gram
 | `dungeon-run` | Dungeon tab and run window (server needs `DungeonSelfClear` and `RemoteCommander`); raid binds ride the same gate |
 | `loot-log` | Loot tab and the `.bot lootlog` catch-up |
 | `downtime` | Downtime button for own-alt errands (`.bot downtime`) |
+| `choice` | Class block in the bot panel Behaviour view (`.bot choice`) |
+| `focus-mark` | Focus mark button in the bot panel and the Bots overview Focus column (`.bot focus`, BOTSTATE `focus=`) |
+| `blessing` | Blessings button on the Party tab and the blessing assignment board (`.bot blessing`) |
+| `blessing-player` | Per-player blessing exceptions in the Blessings board (`.bot blessing ... player`) |
 | `professions` | Professions tab in the bot panel, skill line in the guild row tooltip and the `.bot professions` send |
 
 `behavior` is also advertised; the addon does not gate on it.
@@ -46,14 +51,17 @@ The module owns the protocol; this page lists what the addon uses. The full gram
 | :--- | :--- |
 | `TBM:TRANSPORT` | Choose addon channel or chat |
 | `TBM:CAPS`, `TBM:VERSION` | Feature gates, server version in the header and Info window |
-| `TBM:ROSTER_BEGIN` / `ROSTER` / `ROSTER_END`, `TBM:ROSTER_ERROR` | [Roster tab](../play/party-roster-guild.md#roster-tab); the server is the only roster authority |
+| `TBM:ROSTER_BEGIN` / `ROSTER` / `ROSTER_END`, `TBM:ROSTER_ERROR` | [Roster tab](../play/party-roster-guild.md#roster-tab); `ROSTER\|<guid>\|<name>\|<class>\|<state>\|<grouped>\|<loc>[\|<className>]` (`<className>` is the localized `ChrClasses` name or `-`, missing on older servers); the server is the only roster authority |
 | `TBM:ALTBOTS` | Alt-bot markers on the roster |
 | `TBM:ALTSUM` / `TBM:ALTSUM_END` | Alt-bot summary: `.bot alts` is answered with one `ALTSUM\|<name>\|<text>` sentence per alt-bot playing alone, then `ALTSUM_END\|<count>`; each sentence shows in the Log tab, count 0 says no alt-bots are out |
-| `TBM:CLAIMED_BEGIN` / `CLAIMED` / `CLAIMED_END` | [Guild tab](../play/party-roster-guild.md#guild-tab): `CLAIMED\|<guid>\|<name>\|<class>\|<level>\|<state>\|<grouped>\|<loc>\|<locked>[\|<profs>]` (`<profs>` lists `skillId:value` pairs joined by `;`, or `-`; missing on older servers) |
-| `TBM:BOTSTATE_BEGIN` / `BOTSTATE` / `BOTSTATE_END` | Move mode lamps, party switch states, behaviour switches, live spec for role buttons |
+| `TBM:CLAIMED_BEGIN` / `CLAIMED` / `CLAIMED_END` | [Guild tab](../play/party-roster-guild.md#guild-tab): `CLAIMED\|<guid>\|<name>\|<class>\|<level>\|<state>\|<grouped>\|<loc>\|<locked>[\|<profs>\|<alt>\|<className>]` (`<profs>` lists `skillId:value` pairs joined by `;`, or `-`; `<alt>` is `1` for your own alt; `<className>` is the localized `ChrClasses` name or `-`; trailing fields missing on older servers) |
+| `TBM:BOTSTATE_BEGIN` / `BOTSTATE` / `BOTSTATE_END` | Move mode lamps, party switch states, behaviour switches (`offheal`/`offdps` only for hybrids), live spec for role buttons and the Off-heal/Off-DPS chip, `focus=<mark>` for the focus control. `.bot focus <bot> <mark>` answers with a fresh `BOTSTATE` line, then `ACTION_ACK\|focus\|<scope>\|<n>\|<mark>`, or `ACTION_ERR\|focus\|healer` / `cc-mark` / `no-bot` / `invalid` |
 | `TBM:CC_ASSIGN_BEGIN` / `CC_ASSIGN` / `CC_ASSIGN_END` | CC mark icons on party rows |
 | `TBM:INV_BEGIN` / `INV_EQ` / `INV_ITEM` / `INV_END` | [Bot panel](../play/bot-panel.md) gear and bags |
 | `TBM:SERVICE` | [Bot panel](../play/bot-panel.md#conjured-goods): `.bot service <bot>` is answered with `SERVICE\|<bot>\|<food 0/1>\|<water 0/1>\|<healthstone 0/1>\|<portals>` (`<portals>` is `-` or comma-separated `<spellId>:<city>` pairs); `.bot service <bot> portal <spellId>` opens the portal (ACK or ERR, intent `service portal`) |
+| `TBM:CHOICE` | [Class choices](../play/bot-panel.md#class-choices): `.bot choice <bot|party> status` is answered with one `CHOICE\|<bot>\|<kind>=<value|auto>,known=<v>+<v>+...` line per kind the bot can choose, then `ACTION_ACK\|choice status\|<scope>\|<n>\|-`. `.bot choice <bot> <kind> <value|auto>` answers with a fresh line, then `ACTION_ACK\|choice\|bot:<Name>\|1\|<kind>=<value>`, or `ACTION_ERR\|choice\|invalid` / `unknown-spell` / `no-item` / `no-bot`. Kinds: `aura`, `aspect`, `curse`, `sting`, `pet`, `poison_mh`, `poison_oh`. |
+| `TBM:BLESSING` | [Blessing grid](../play/party-roster-guild.md#blessings): `.bot blessing <bot\|party\|raid> status` is answered with one `BLESSING\|<paladin>\|warrior=<b>,paladin=<b>,hunter=<b>,rogue=<b>,priest=<b>,shaman=<b>,mage=<b>,warlock=<b>,druid=<b>,known=<b>+<b>[,players=<Name>:<b>+...]` line per paladin bot, then `ACTION_ACK\|blessing status\|<scope>\|<n>\|-` (`<b>` is `auto`, `might`, `wisdom`, `kings`, `salvation`, `sanctuary` or `light`; `known` lists the trained blessings and may be empty; `players` lists per-character overrides and is omitted when empty). `.bot blessing <bot> <class> <b>` and `.bot blessing <bot\|party\|raid> player <name> <b>` answer with a fresh line, then `ACTION_ACK\|blessing\|bot:<Name>\|1\|...`, or `ACTION_ERR\|blessing\|invalid` / `unknown-spell` / `no-bot`. |
+| `TBM:TOTEM` | [Shaman totems](../play/bot-panel.md#shaman-totems): `.bot totem <bot\|party\|raid> status` is answered with one `TOTEM\|<bot>\|earth=<v>,fire=<v>,water=<v>,air=<v>,mode=<auto\|prepull\|manual>[,known=<totem>+<totem>...]` line per shaman, then `ACTION_ACK\|totem status\|<scope>\|<n>\|-` (`<v>` is `auto`, `none` or a full lowercase totem name; `known` lists the trained totems, may be empty, and is missing on older servers, which then get the whole per-slot list). `.bot totem <scope> set <earth>,<fire>,<water>,<air>` answers with a fresh line per shaman changed, then `ACK totem set` (or `ERR totem set` `invalid` / `no-shaman`). A single-slot or `mode` order is followed by a status request when only its ACK arrived. |
 | `TBM:PROF_BEGIN` / `PROF` / `RECIPE` / `RECIPE_MISSING` / `PROF_END` | [Bot panel](../play/bot-panel.md#professions) trade skills and recipes: `.bot professions <bot>` is answered with one `PROF_BEGIN\|<bot>`, one `PROF\|<skillId>\|<value>\|<max>` line per profession, one `RECIPE\|<skillId>\|<spellId>\|<itemId or 0>\|<orange>\|<yellow>\|<green>\|<grey>\|<order>` line per known recipe (item 0 = enchant, `<order>` is `ok` or the craft-order refusal reason and is missing on older servers), one `RECIPE_MISSING\|<skillId>\|<spellId>\|<itemId or 0>\|<reqSkill>\|<recipeItemId or 0>` line per learnable-but-unknown recipe (recipeItemId 0 = trainer only), and `PROF_END\|<bot>\|<recipeCount>\|<missingCount>` (`<missingCount>` missing on older servers, read as 0). The addon keeps the reply only when both counts match the lines received. |
 | `TBM:ACTION_ACK`, `TBM:ACTION_ERR` | Status line and Log tab result of each order |
 | `TBM:RUN` | [Dungeon run](../play/dungeon-run.md) status (a stop-before-boss run appends `until boss (step N)`) |

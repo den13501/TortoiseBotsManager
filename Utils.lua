@@ -546,6 +546,44 @@ function TB.StatusText(st, inGroup)
     return L["Online"]
 end
 
+function TB.FindGroupUnit(name)
+    local target = TB.NormalizeName(name)
+    if not target or not UnitName then return nil end
+    local raid = (GetNumRaidMembers and GetNumRaidMembers()) or 0
+    if raid > 0 then
+        for i = 1, raid do
+            local unit = "raid" .. i
+            if TB.NormalizeName(UnitName(unit)) == target then return unit end
+        end
+    end
+    local party = (GetNumPartyMembers and GetNumPartyMembers()) or 0
+    for i = 1, party do
+        local unit = "party" .. i
+        if TB.NormalizeName(UnitName(unit)) == target then return unit end
+    end
+    return nil
+end
+
+function TB.GetClassName(classId, serverClassName, botName)
+    if classId and C.CLASS_NAMES and C.CLASS_NAMES[classId] then
+        return C.CLASS_NAMES[classId]
+    end
+    local trimmed = TB.Trim(serverClassName or "")
+    if trimmed ~= "" and trimmed ~= "-" then
+        return trimmed
+    end
+    if botName and UnitClass then
+        local unit = TB.FindGroupUnit(botName)
+        if unit then
+            local unitClass = UnitClass(unit)
+            if unitClass and unitClass ~= "" and unitClass ~= "Unknown" then
+                return unitClass
+            end
+        end
+    end
+    return L["Unknown class"]
+end
+
 function TB.GetClassColor(classId)
     local colors = (C and C.CLASS_COLORS) or {}
     if classId and colors[classId] then
@@ -554,11 +592,14 @@ function TB.GetClassColor(classId)
     return { 0.92, 0.90, 0.84, hex = "ffebe6d6" }
 end
 
--- Point a texture at a class's icon; false when the class has none.
+-- Point a texture at a class's icon; falls back to a question mark when unknown.
 function TB.SetClassIcon(tex, classId)
+    if not tex then return false end
     local coords = C.CLASS_ICON_TCOORDS and C.CLASS_ICON_TCOORDS[classId]
-    if not tex or not coords then
-        if tex then tex:Hide() end
+    if not coords then
+        tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+        tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        tex:Show()
         return false
     end
     tex:SetTexture(C.CLASS_ICON_FILE)
@@ -610,53 +651,56 @@ end
 -- ── Unified Role Policy ─────────────────────────────────────────────────────
 TB.Roles = {}
 
+-- `spec` is the server's `.bot role <bot> <spec>` id for the row (shaman Enh
+-- Tank stays on the plain `tank` role); `strat` is only read back to find the
+-- current row from the live BOTSTATE specs.
 TB.Roles.CLASS_ROLES = {
     [1] = { -- Warrior
-        { id = "tank", label = L["Protection"], strat = "+protection,-arms,-fury" },
-        { id = "dps", label = L["Arms"], strat = "+arms,-protection,-fury" },
-        { id = "fury", label = L["Fury"], strat = "+fury,-protection,-arms" },
+        { id = "tank", spec = "protection", label = L["Protection"], strat = "+protection,-arms,-fury" },
+        { id = "dps", spec = "arms", label = L["Arms"], strat = "+arms,-protection,-fury" },
+        { id = "fury", spec = "fury", label = L["Fury"], strat = "+fury,-protection,-arms" },
     },
     [2] = { -- Paladin
-        { id = "tank", label = L["Protection"], strat = "+protection,-holy,-retribution" },
-        { id = "heal", label = L["Holy"], strat = "+holy,-protection,-retribution" },
-        { id = "dps", label = L["Retribution"], strat = "+retribution,-protection,-holy" },
+        { id = "tank", spec = "protection", label = L["Protection"], strat = "+protection,-holy,-retribution" },
+        { id = "heal", spec = "holy", label = L["Holy"], strat = "+holy,-protection,-retribution" },
+        { id = "dps", spec = "retribution", label = L["Retribution"], strat = "+retribution,-protection,-holy" },
     },
     [3] = { -- Hunter
-        { id = "bm", label = L["Beastmaster"], strat = "+beast mastery,-marksmanship,-survival" },
-        { id = "mm", label = L["Marksman"], strat = "+marksmanship,-beast mastery,-survival" },
-        { id = "survival", label = L["Survival"], strat = "+survival,-beast mastery,-marksmanship" },
+        { id = "bm", spec = "bm", label = L["Beastmaster"], strat = "+beast mastery,-marksmanship,-survival" },
+        { id = "mm", spec = "mm", label = L["Marksman"], strat = "+marksmanship,-beast mastery,-survival" },
+        { id = "survival", spec = "survival", label = L["Survival"], strat = "+survival,-beast mastery,-marksmanship" },
     },
     [4] = { -- Rogue
-        { id = "combat", label = L["Combat"], strat = "+combat,-assassination,-subtlety" },
-        { id = "assa", label = L["Assassination"], strat = "+assassination,-combat,-subtlety" },
-        { id = "subtlety", label = L["Subtlety"], strat = "+subtlety,-combat,-assassination" },
+        { id = "combat", spec = "combat", label = L["Combat"], strat = "+combat,-assassination,-subtlety" },
+        { id = "assa", spec = "assa", label = L["Assassination"], strat = "+assassination,-combat,-subtlety" },
+        { id = "subtlety", spec = "subtlety", label = L["Subtlety"], strat = "+subtlety,-combat,-assassination" },
     },
     [5] = { -- Priest
-        { id = "heal", label = L["Holy"], strat = "+holy,-discipline,-shadow" },
-        { id = "disc", label = L["Discipline"], strat = "+discipline,-holy,-shadow" },
-        { id = "dps", label = L["Shadow"], strat = "+shadow,-holy,-discipline,-offdps" },
+        { id = "heal", spec = "holy", label = L["Holy"], strat = "+holy,-discipline,-shadow" },
+        { id = "disc", spec = "discipline", label = L["Discipline"], strat = "+discipline,-holy,-shadow" },
+        { id = "dps", spec = "shadow", label = L["Shadow"], strat = "+shadow,-holy,-discipline,-offdps" },
     },
     [7] = { -- Shaman
-        { id = "heal", label = L["Restoration"], strat = "+restoration,-elemental,-enhancement" },
-        { id = "ele", label = L["Elemental"], strat = "+elemental,-restoration,-enhancement" },
-        { id = "enh", label = L["Enhancement"], strat = "+enhancement,-restoration,-elemental" },
-        { id = "tank", label = L["Enh Tank"], strat = "+tank shaman,-restoration,-elemental,-enhancement" },
+        { id = "heal", spec = "restoration", label = L["Restoration"], strat = "+restoration,-elemental,-enhancement" },
+        { id = "ele", spec = "ele", label = L["Elemental"], strat = "+elemental,-restoration,-enhancement" },
+        { id = "enh", spec = "enh", label = L["Enhancement"], strat = "+enhancement,-restoration,-elemental" },
+        { id = "tank", spec = "tank", label = L["Enh Tank"], strat = "+tank shaman,-restoration,-elemental,-enhancement" },
     },
     [8] = { -- Mage
-        { id = "frost", label = L["Frost"], strat = "+frost,-fire,-arcane" },
-        { id = "fire", label = L["Fire"], strat = "+fire,-frost,-arcane" },
-        { id = "arcane", label = L["Arcane"], strat = "+arcane,-frost,-fire" },
+        { id = "frost", spec = "frost", label = L["Frost"], strat = "+frost,-fire,-arcane" },
+        { id = "fire", spec = "fire", label = L["Fire"], strat = "+fire,-frost,-arcane" },
+        { id = "arcane", spec = "arcane", label = L["Arcane"], strat = "+arcane,-frost,-fire" },
     },
     [9] = { -- Warlock
-        { id = "affliction", label = L["Affliction"], strat = "+affliction,-demonology,-destruction" },
-        { id = "demonology", label = L["Demonology"], strat = "+demonology,-affliction,-destruction" },
-        { id = "destruction", label = L["Destruction"], strat = "+destruction,-affliction,-demonology" },
+        { id = "affliction", spec = "affliction", label = L["Affliction"], strat = "+affliction,-demonology,-destruction" },
+        { id = "demonology", spec = "demonology", label = L["Demonology"], strat = "+demonology,-affliction,-destruction" },
+        { id = "destruction", spec = "destruction", label = L["Destruction"], strat = "+destruction,-affliction,-demonology" },
     },
     [11] = { -- Druid
-        { id = "tank", label = L["Feral Bear"], strat = "+tank feral,-dps feral,-restoration,-balance" },
-        { id = "cat", label = L["Feral Cat"], strat = "+dps feral,-tank feral,-restoration,-balance" },
-        { id = "heal", label = L["Restoration"], strat = "+restoration,-tank feral,-dps feral,-balance" },
-        { id = "boomkin", label = L["Balance"], strat = "+balance,-tank feral,-dps feral,-restoration" },
+        { id = "tank", spec = "bear", label = L["Feral Bear"], strat = "+tank feral,-dps feral,-restoration,-balance" },
+        { id = "cat", spec = "cat", label = L["Feral Cat"], strat = "+dps feral,-tank feral,-restoration,-balance" },
+        { id = "heal", spec = "restoration", label = L["Restoration"], strat = "+restoration,-tank feral,-dps feral,-balance" },
+        { id = "boomkin", spec = "boomkin", label = L["Balance"], strat = "+balance,-tank feral,-dps feral,-restoration" },
     },
 }
 
@@ -832,22 +876,13 @@ function TB.Roles.SetBotRole(botName, role, classId)
     TortoiseBotsDB = TortoiseBotsDB or {}
     TortoiseBotsDB.botRoles = TortoiseBotsDB.botRoles or {}
     local state = TB.GetBotState and TB.GetBotState(botName)
-    local previousRole = (state and state.specs and roleFromSpecs(TB.Roles.GetClassRoles(classId), state.specs))
-        or TortoiseBotsDB.botRoles[botName]
     TortoiseBotsDB.botRoles[botName] = roleDef.id
     -- Show the pick until the next roster snapshot reports the new specs.
     if state then state.specs = nil end
 
-    if roleDef.id == "tank" then
-        TB.SendBotCommand("role " .. botName .. " tank")
-    else
-        if previousRole == "tank" then
-            TB.SendBotCommand("role " .. botName .. " clear")
-        end
-        if roleDef.strat and roleDef.strat ~= "" then
-            TB.SendBotCommand("strategy " .. roleDef.strat .. " " .. botName)
-        end
-    end
+    -- The server rebuilds the whole kit for the spec, off-spec default
+    -- included; the bot's behaviour switches go back to their defaults.
+    TB.SendBotCommand("role " .. botName .. " " .. (roleDef.spec or roleDef.id))
     if TB.Print then TB.Print(string.format(L["%s role set to %s"], botName, TB.Roles.DisplayLabel(roleDef.label))) end
     return true
 end

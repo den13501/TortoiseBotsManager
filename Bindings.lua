@@ -26,7 +26,7 @@ BINDING_NAME_TBM_FAV10 = string.format(L["Mini favourite %d"], 10)
 BINDING_NAME_TBM_FAV11 = string.format(L["Mini favourite %d"], 11)
 BINDING_NAME_TBM_FAV12 = string.format(L["Mini favourite %d"], 12)
 BINDING_NAME_TBM_TOGGLE_WINDOW = L["Toggle window"]
-BINDING_NAME_TBM_MINI_MODE = L["Toggle mini bar"]
+BINDING_NAME_TBM_TARGET_PANEL = L["Open bot controls for target"]
 
 
 -- Keybinding handlers: one gameplay intent each, same path as the Fight tab.

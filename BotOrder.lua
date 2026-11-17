@@ -3139,7 +3139,7 @@ local function createOrderLimits(pane)
     end)
     win.hoursBox = hoursBox
     setTooltip(hoursBox, L["Farm time"],
-        { L["Whole hours this order may farm (1-24). The bot stops when the time runs out."] })
+        { L[L["Whole hours this order may farm (1-24). The bot stops when the time runs out."]] })
 
     local keepBox = CreateFrame("CheckButton", "TortoiseBotsManagerOrderKeep", pane, "UICheckButtonTemplate")
     TB.StyleCheckButton(keepBox)
@@ -3150,7 +3150,7 @@ local function createOrderLimits(pane)
     end)
     win.keepBox = keepBox
     setTooltip(keepBox, L["Keep in stock"],
-        { L["Delivered, the order stays: the bot watches the bank and refills when it drops below the amount."] })
+        { L[L["Delivered, the order stays: the bot watches the bank and refills when it drops below the amount."]] })
     local keepLabel = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     keepLabel:SetPoint("LEFT", keepBox, "RIGHT", 2, 0)
     keepLabel:SetWidth(120); keepLabel:SetJustifyH("LEFT")
@@ -3194,7 +3194,7 @@ local function createOrderLimits(pane)
     end)
     win.goldBox = goldBox
     setTooltip(goldBox, L["Max guild gold"],
-        { L["Most the order may spend from the guild bank, in copper. Empty means no cap."] })
+        { L[L["Most the order may spend from the guild bank, in copper. Empty means no cap."]] })
     local noLimitBox = CreateFrame("CheckButton", "TortoiseBotsManagerOrderNoLimit", pane, "UICheckButtonTemplate")
     TB.StyleCheckButton(noLimitBox)
     noLimitBox:SetWidth(20); noLimitBox:SetHeight(20)
@@ -3204,7 +3204,7 @@ local function createOrderLimits(pane)
     end)
     win.noLimitBox = noLimitBox
     setTooltip(noLimitBox, L["No time limit"],
-        { L["The bot farms until it has the amount, however long it takes. Only Cancel stops it."] })
+        { L[L["The bot farms until it has the amount, however long it takes. Only Cancel stops it."]] })
     local noLimitLabel = pane:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     noLimitLabel:SetPoint("LEFT", noLimitBox, "RIGHT", 2, 0)
     noLimitLabel:SetWidth(110); noLimitLabel:SetJustifyH("LEFT")
@@ -4000,7 +4000,7 @@ function TB.RefreshOrderChrome(order)
     end
     if win.statusLine then
         if orderGuild then
-            win.statusLine:SetText(L["Pick a bot to open its order flow."])
+            win.statusLine:SetText(L["Click a bot to place an order for it."])
         elseif order then
             win.statusLine:SetText(string.format(L["Current: %s"], TB.OrderRowText(order)))
         else
@@ -4159,10 +4159,35 @@ function TB.RefreshOrderBringRows()
     end
 end
 
+-- The player's own alt spends its own gold and gives away what it gets, so
+-- the order window asks first. altPass lets the accepted call (and the
+-- order window it opens) through.
+local altPass = nil
+local function confirmAltOrder(bot, again)
+    local entry = TB.GetClaimedEntry and TB.GetClaimedEntry(bot)
+    if not (entry and entry.alt) or altPass == bot then return true end
+    StaticPopupDialogs["TORTOISEBOTSMANAGER_ALT_ORDER"] = {
+        text = string.format(L["%s is your own character, not a guild bot.\n\nAn order spends %s's own gold and sends what it gets to the guild bank or by mail. Are you sure?"], bot, bot),
+        button1 = L["Yes"],
+        button2 = L["Cancel"],
+        OnAccept = function()
+            altPass = bot
+            again()
+            altPass = nil
+        end,
+        timeout = 0,
+        whileDead = 1,
+        hideOnEscape = 1,
+    }
+    StaticPopup_Show("TORTOISEBOTSMANAGER_ALT_ORDER")
+    return false
+end
+
 function TB.OpenOrderWindow(bot)
     if not TB.HasOrderCapability() then return false end
     bot = norm(bot)
     if not bot then return false end
+    if not confirmAltOrder(bot, function() TB.OpenOrderWindow(bot) end) then return false end
     if not win then createWindow() end
     -- Same anchor as the other satellites: only one shows at a time.
     if TB.CloseVault then TB.CloseVault() end
@@ -4171,6 +4196,7 @@ function TB.OpenOrderWindow(bot)
     if TB.CloseServerInfo then TB.CloseServerInfo() end
     if TB.CloseBotPanel then TB.CloseBotPanel() end
     if TB.CloseActiveOrders then TB.CloseActiveOrders() end
+    if TB.CloseBlessings then TB.CloseBlessings() end
     local switched = windowBot ~= bot or orderGuild
     orderGuild = false
     orderStep = 1
@@ -4271,6 +4297,7 @@ function TB.PickGuildOrderBot(entry, bot)
     if not entry or not bot then return false end
     bot = norm(bot)
     if not bot then return false end
+    if not confirmAltOrder(bot, function() TB.PickGuildOrderBot(entry, bot) end) then return false end
     if entry.kind == "enchant" then
         if not TB.OpenOrderWindow(bot) then return false end
         orderGuild = false
