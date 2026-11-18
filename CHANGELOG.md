@@ -2,6 +2,29 @@
 
 All notable changes to TortoiseBotsManager are documented here.
 
+## v2.4.1 (2026-11-17)
+
+### UI & Controls
+- Guild tab role buttons now display the bot's actual combat role instead of defaulting to the first role in its class list (e.g., a Ret paladin no longer shows as Prot). [#95](https://github.com/Sagiroth/TortoiseBotsManager/pull/95)
+- Role resolution on the guild tab now matches the party tab: live spec when grouped, then your manual pick, then talent spec — no more mismatches between the button, guild note, and chat. [#95](https://github.com/Sagiroth/TortoiseBotsManager/pull/95)
+- Clicking a guild tab role button now cycles from the correct starting role, so you no longer have to step past a wrong default to set the role you want. [#95](https://github.com/Sagiroth/TortoiseBotsManager/pull/95)
+
+---
+
+## v2.4.0 (2026-11-17)
+
+### Tactical & Actions
+- New **Use** button in the MOVE row and mini bar: park your bot next to a lever, door, or chest and it walks over and interacts. Button only appears on servers that support it, so no dead UI on unsupported realms. [#94](https://github.com/Sagiroth/TortoiseBotsManager/pull/94)
+- Bag item menu now splits equip options: send one-hand weapons to **main hand** or **off hand**, and choose which **ring or trinket slot** an item goes into instead of a single generic Equip. [#94](https://github.com/Sagiroth/TortoiseBotsManager/pull/94)
+
+### UI & Controls
+- Loot tab rebuilt as a proper table: **Time, Bot** (class-coloured)**, Item** (icon + quality colour)**, Result, Reason, Source** — no more one giant wrapped line per pickup. [#93](https://github.com/Sagiroth/TortoiseBotsManager/pull/93)
+- Result column is a colour-coded badge: NEED, GREED, PASS, DE, LOOTED or MONEY, so you can scan roll outcomes at a glance. [#93](https://github.com/Sagiroth/TortoiseBotsManager/pull/93)
+- Reason column shows a short tag (Vendor, Profession, Upgrade, Future, Ordered, Gave way…) with the full sentence and timestamp tucked into the row tooltip alongside the item tooltip. [#93](https://github.com/Sagiroth/TortoiseBotsManager/pull/93)
+- Loot log now covers **every** bot in the group, not just your own — roll votes and their reasons are visible for all companions. [#93](https://github.com/Sagiroth/TortoiseBotsManager/pull/93)
+
+---
+
 ## v2.3.2 (2026-11-16)
 
 ### Tactical & Actions

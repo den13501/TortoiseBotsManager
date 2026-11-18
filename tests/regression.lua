@@ -160,6 +160,7 @@ GameTooltip = {
     SetOwner = function(self, owner) self.owner = owner end,
     IsOwned = function(self, owner) return self.owner == owner end,
     SetText = function() end,
+    SetHyperlink = function() end,
     AddLine = function() end,
     Show = function() end,
     Hide = function(self) self.owner = nil end,
@@ -1386,6 +1387,26 @@ TB.Refresh()
 assert(not TB.actionButtons.downtime.enabled, "Downtime must be disabled on servers without the capability")
 TB.OnSystemMessage("TBM:CAPS|pull-seconds,flee,inventory,behavior,downtime")
 
+-- Use: capability-gated nearby object interaction.
+TB.OnSystemMessage("TBM:CAPS|pull-seconds,flee,inventory,behavior,downtime")
+TB.Refresh()
+assert(TB.actionButtons.use and not TB.actionButtons.use.visible, "Use button must be hidden without use-object capability")
+TB.OnSystemMessage("TBM:CAPS|pull-seconds,flee,inventory,behavior,downtime,use-object")
+TB.Refresh()
+assert(TB.actionButtons.use and TB.actionButtons.use.visible, "Use button must show when use-object is advertised")
+now = now + 1
+this = TB.actionButtons.use
+TB.actionButtons.use.scripts.OnClick(TB.actionButtons.use)
+assert(lastAddon() == "action use", "Use button must send action use")
+TB.OnSystemMessage("TBM:ACTION_ACK|use|party|1|Pulling Door Lever")
+assert(TB.lastActionAck and TB.lastActionAck.intent == "use"
+    and TB.lastActionAck.executor == "Pulling Door Lever",
+    "use ACK must carry readable object action")
+TB.OnSystemMessage("TBM:ACTION_ERR|use|no-object|Nothing usable near you")
+assert(TB.lastActionError and TB.lastActionError.intent == "use"
+    and TB.lastActionError.code == "no-object",
+    "use ERR must parse like other actions")
+
 -- Live specs pick the shown role (a hire has no saved role); values may hold spaces.
 TB.OnSystemMessage("TBM:BOTSTATE_BEGIN|7")
 TB.OnSystemMessage("TBM:BOTSTATE|Rista|move=follow,specs=retribution")
@@ -1403,6 +1424,32 @@ assert(TB.Roles.GetBotRole("Discbot", 5) == "disc", "discipline specs must show 
 assert(TB.Roles.GetBotRole("Shamtank", 7) == "tank", "the shaman tank kit must show Enh Tank")
 assert(TB.Roles.GetBotRole("Furybot", 1) == "fury", "fury specs must show Fury")
 assert(TB.Roles.GetBotRole("Catbot", 11) == "cat", "a spec with a space must parse")
+
+-- Guild bots outside the party: no pick shows the talent spec from the note.
+do
+    local guildNotes = {
+        { "Gunhild", "Ret 4/0/40 Eg201 Mi204" },
+        { "Ferabot", "Feral 0/30/21" },
+        { "Notebot", "my favourite paladin" },
+    }
+    GetNumGuildMembers = function() return table.getn(guildNotes) end
+    GetGuildRosterInfo = function(i) return guildNotes[i][1], "", 0, 60, "", "", guildNotes[i][2] end
+    TortoiseBotsDB.botRoles = TortoiseBotsDB.botRoles or {}
+    TortoiseBotsDB.botRoles["Gunhild"] = nil
+    assert(TB.Roles.GetBotRole("Gunhild", 2) == "dps", "a Ret note with no pick must show Retribution")
+    assert(TB.Roles.GetBotRole("Ferabot", 11) == "tank", "a Feral note cannot tell Bear from Cat")
+    assert(TB.Roles.GetBotRole("Notebot", 2) == "tank", "a hand-written note falls back to the first role")
+    TortoiseBotsDB.botRoles["Gunhild"] = "tank"
+    assert(TB.Roles.GetBotRole("Gunhild", 2) == "tank", "a picked role beats the talent spec in the note")
+    TortoiseBotsDB.botRoles["Gunhild"] = nil
+    local realSend = TB.SendBotCommand
+    TB.SendBotCommand = function() end
+    local nextRole = TB.Roles.CycleBotRole("Gunhild", 2)
+    TB.SendBotCommand = realSend
+    assert(nextRole and nextRole.id == "tank", "cycling a Ret paladin moves on from Retribution")
+    TortoiseBotsDB.botRoles["Gunhild"] = nil
+    GetNumGuildMembers, GetGuildRosterInfo = nil, nil
+end
 
 -- Move modes: the shared mode lights up, an ACK moves it, Come waits for the poll.
 partyMembers = { "Alpha", "Gamma" }
@@ -2956,7 +3003,7 @@ now = now + 1
 this = TB.tabLoot
 TB.tabLoot.scripts.OnClick(TB.tabLoot)
 assert(TB.lootFrame:IsVisible(), "the Loot tab shows its page")
-assert(TB.lootRows and table.getn(TB.lootRows) == 15, "the Loot tab owns its scroll rows")
+assert(TB.lootRows and table.getn(TB.lootRows) == 14, "the Loot tab owns its scroll rows")
 
 -- Catch-up on login starts from the stored cursor.
 event, arg1 = "PLAYER_LOGIN", nil
@@ -3010,9 +3057,37 @@ assert(table.getn(addonSent) == beforeExpired, "an empty end asks for nothing mo
 local history = TB.GetLootHistory()
 assert(table.getn(history) == 3 and history[1].ts == "2026-10-27 12:00:03"
     and history[3].ts == "2026-10-27 12:00:01", "stored rows stay newest first")
-assert(string.find(TB.lootRows[1].line.text, "Gamemaster's Robe", 1, true)
-    and string.find(TB.lootRows[1].line.text, "Need", 1, true), "the newest row renders with its vote")
-assert(string.find(TB.lootRows[2].line.text, "15s", 1, true), "money rows render as coins")
+assert(string.find(TB.lootRows[1].itemText.text, "Gamemaster's Robe", 1, true)
+    and TB.lootRows[1].resultText.text == "NEED"
+    and TB.lootRows[1].botText.text == "Alpha"
+    and TB.lootRows[1].timeText.text == "27.10", "the newest row renders in columns with its badge")
+assert(string.find(TB.lootRows[2].itemText.text, "15s", 1, true)
+    and TB.lootRows[2].resultText.text == "MONEY", "money rows render as coins with MONEY badge")
+assert(TB.lootRows[3].resultText.text == "LOOTED", "pickup rows render with LOOTED badge")
+assert(TB.FormatLootTime(os.date("%Y-%m-%d") .. " 09:05:12") == "09:05", "today timestamps show HH:MM")
+assert(TB.FormatLootTime("2026-10-27 09:05:12", "2026-11-17") == "27.10", "older timestamps show DD.MM")
+assert(TB.LootRowShortReason({ event = "LootRoll", reason = "to sell to a vendor for 20s 11c." }) == "Vendor", "vendor reason tag")
+assert(TB.LootRowShortReason({ event = "LootRoll", reason = "to use it for my profession." }) == "Profession", "profession reason tag")
+assert(TB.LootRowShortReason({ event = "LootRoll", reason = "ordered by Pocket" }) == "Ordered", "ordered reason tag")
+assert(TB.LootRowShortReason({ event = "LootRoll", reason = "as a future upgrade (requires level 16)." }) == "Future", "future upgrade tag")
+assert(TB.LootRowShortReason({ event = "LootRoll", reason = "for equiping as upgrade. Stepped down to greed: Ana fits it better." }) == "Gave way", "stepped down tag")
+assert(TB.LootRowShortReason({ event = "LootRoll", reason = "for equiping as upgrade." }) == "Upgrade", "upgrade tag")
+assert(TB.LootRowShortReason({ event = "StoreLootAction", source = "Defias Thug" }) == "", "pickups have no reason")
+assert(TB.LootRowBadge({ event = "LootRoll", vote = "disenchant" }).label == "DE", "disenchant rolls map to DE badge")
+assert(TB.LootRowBadge({ event = "LootRoll", vote = "greed" }).label == "GREED", "greed rolls map to GREED badge")
+assert(TB.LootRowBadge({ event = "LootRoll", vote = "pass" }).label == "PASS", "pass rolls map to PASS badge")
+do
+    local tipLines = {}
+    local realAddLine = GameTooltip.AddLine
+    GameTooltip.AddLine = function(_, text) table.insert(tipLines, text) end
+    TB.lootRows[1].scripts.OnEnter(TB.lootRows[1])
+    GameTooltip.AddLine = realAddLine
+    assert(tipLines[1] == "for equiping as upgrade.", "roll row tooltip shows its reason")
+    assert(tipLines[table.getn(tipLines)] == "2026-10-27 12:00:03", "row tooltip includes full timestamp")
+end
+TB.OnSystemMessage("TBM:LOOT|2026-10-27 12:00:05|Randombot|LootRoll|greed:2586:ordered by Tester|Gamemaster's Robe|||")
+assert(TB.GetLootHistory()[1].bot == "Randombot" and TB.GetLootHistory()[1].vote == "greed"
+    and TB.GetLootHistory()[1].reason == "ordered by Tester", "live LootRoll rows merge outside catch-up")
 now = now + 1
 TB.OnSystemMessage("TBM:ACTION_ERR|lootlog|expired|Cursor piece was pruned.")
 assert(TB.GetLootCursor() == "", "an expired cursor is dropped")
@@ -5859,6 +5934,80 @@ end
 
     GetContainerNumSlots, GetContainerItemLink, GetContainerItemInfo = savedNumSlots, savedLink, savedInfo
     PickupContainerItem, ClickTradeButton, CursorHasItem = savedPickup, savedClickTrade, savedCursorHas
+    partyMembers = savedParty
+    TB.CloseBotPanel()
+end)();
+
+-- ── BotPanel bag item equip slot choices ─────────────────────────────────────
+(function()
+    local savedParty = partyMembers
+    local savedUnitClass = UnitClass
+    itemCache[19019] = { name = "Thunderfury", quality = 5, itemLevel = 80, itemType = "Weapon",
+        subType = "Sword", equipLoc = "INVTYPE_WEAPON", texture = "Interface\\Icons\\INV_Sword_39" }
+    itemCache[19384] = { name = "Master Dragonslayer's Ring", quality = 4, itemLevel = 83, itemType = "Armor",
+        subType = "Miscellaneous", equipLoc = "INVTYPE_FINGER", texture = "Interface\\Icons\\INV_Jewelry_Ring_41" }
+    itemCache[19406] = { name = "Drake Fang Talisman", quality = 4, itemLevel = 75, itemType = "Armor",
+        subType = "Miscellaneous", equipLoc = "INVTYPE_TRINKET", texture = "Interface\\Icons\\INV_Jewelry_Talisman_05" }
+    itemCache[16841] = { name = "Lawbringer Chestguard", quality = 4, itemLevel = 66, itemType = "Armor",
+        subType = "Plate", equipLoc = "INVTYPE_CHEST", texture = "Interface\\Icons\\INV_Chest_Plate03" }
+
+    partyMembers = { "Alpha" }
+    local botClassFile = "ROGUE"
+    UnitClass = function(u)
+        if u == "party1" then return botClassFile, botClassFile end
+        return savedUnitClass(u)
+    end
+
+    TB.OpenBotPanel("Alpha")
+    local menu = frames["TortoiseBotsManagerItemMenu"]
+    assert(menu, "item menu frame exists")
+    local fakeOwner = CreateFrame("Button", nil, UIParent)
+
+    -- Dual-wield class + 1H weapon -> Equip main hand + Equip off hand
+    menu:Open(fakeOwner, { id = 19019, bag = 255, slot = 23, equippable = true })
+    assert(menu.first:GetText() == "Equip main hand", "1H weapon shows Equip main hand")
+    assert(menu.firstB:IsVisible() and menu.firstB:GetText() == "Equip off hand",
+        "dual-wield class 1H weapon shows Equip off hand")
+    now = now + 1
+    menu.first.scripts.OnClick(menu.first)
+    assert(lastAddon() == "item Alpha equip 255 23 mainhand", "Equip main hand sends mainhand")
+
+    menu:Open(fakeOwner, { id = 19019, bag = 255, slot = 23, equippable = true })
+    now = now + 1
+    menu.firstB.scripts.OnClick(menu.firstB)
+    assert(lastAddon() == "item Alpha equip 255 23 offhand", "Equip off hand sends offhand")
+
+    -- Non-dual-wield class + 1H weapon -> Equip main hand only
+    botClassFile = "PALADIN"
+    menu:Open(fakeOwner, { id = 19019, bag = 255, slot = 23, equippable = true })
+    assert(menu.first:GetText() == "Equip main hand", "non-DW class 1H weapon shows Equip main hand")
+    assert(not menu.firstB:IsVisible(), "non-DW class 1H weapon hides Equip off hand")
+
+    -- Ring -> Equip ring 1 + Equip ring 2
+    menu:Open(fakeOwner, { id = 19384, bag = 255, slot = 24, equippable = true })
+    assert(menu.first:GetText() == "Equip ring 1", "ring shows Equip ring 1")
+    assert(menu.firstB:IsVisible() and menu.firstB:GetText() == "Equip ring 2", "ring shows Equip ring 2")
+    now = now + 1
+    menu.firstB.scripts.OnClick(menu.firstB)
+    assert(lastAddon() == "item Alpha equip 255 24 finger2", "Equip ring 2 sends finger2")
+
+    -- Trinket -> Equip trinket 1 + Equip trinket 2
+    menu:Open(fakeOwner, { id = 19406, bag = 255, slot = 25, equippable = true })
+    assert(menu.first:GetText() == "Equip trinket 1", "trinket shows Equip trinket 1")
+    assert(menu.firstB:IsVisible() and menu.firstB:GetText() == "Equip trinket 2", "trinket shows Equip trinket 2")
+    now = now + 1
+    menu.first.scripts.OnClick(menu.first)
+    assert(lastAddon() == "item Alpha equip 255 25 trinket1", "Equip trinket 1 sends trinket1")
+
+    -- Other item -> single Equip
+    menu:Open(fakeOwner, { id = 16841, bag = 255, slot = 26, equippable = true })
+    assert(menu.first:GetText() == "Equip", "chest shows single Equip")
+    assert(not menu.firstB:IsVisible(), "chest hides second equip button")
+    now = now + 1
+    menu.first.scripts.OnClick(menu.first)
+    assert(lastAddon() == "item Alpha equip 255 26", "single Equip sends no target slot")
+
+    UnitClass = savedUnitClass
     partyMembers = savedParty
     TB.CloseBotPanel()
 end)()

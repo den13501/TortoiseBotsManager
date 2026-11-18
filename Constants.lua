@@ -7,7 +7,7 @@ local TB = TortoiseBots
 local L = TB.L
 TB.C = TB.C or {}
 
-TB.C.VERSION = "2.3.2"
+TB.C.VERSION = "2.4.1"
 
 -- Author credit shown in the window header, the load message and /tbm help.
 -- Forks and repacks must keep it (see README "Credit").
@@ -232,6 +232,15 @@ TB.C.ACTION_DEFINITIONS = {
         section = "move",
         icon = "Interface\\Icons\\Spell_Nature_Swiftness",
         tip = L["Bots leave their guard posts and move freely again."],
+    },
+    {
+        id = "use",
+        intent = "use",
+        label = "Use",
+        section = "move",
+        cap = "use-object",
+        icon = "Interface\\Icons\\INV_Misc_Gear_01",
+        tip = L["Stand next to a lever, door or chest: the bot walks over and uses it."],
     },
 
     -- Combat stances (Fight MOVE card pills)
